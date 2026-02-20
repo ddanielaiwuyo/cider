@@ -9,18 +9,17 @@ import (
 	"net"
 	"zod/protocol"
 )
+var connectionPool = make(map[net.Conn]bool)
 
-const socketAddr = ":4000"
-
-var connections = make(map[net.Conn]bool)
+const serverAddr = ":4000"
 
 func StartServer() error {
-	listener, err := net.Listen("tcp", socketAddr)
+	listener, err := net.Listen("tcp", serverAddr)
 	if err != nil {
 		return err
 	}
 
-	log.Println(" server listening on port ", socketAddr)
+	log.Println(" server listening on port ", serverAddr)
 
 	for {
 		conn, err := listener.Accept()
@@ -28,89 +27,59 @@ func StartServer() error {
 			log.Printf("accept err: %s\n", err)
 		}
 
-		connections[conn] = true
+		connectionPool[conn] = true
 		fmt.Printf("conn: %s\n", conn.RemoteAddr().String())
 
-		go handle_connections(conn)
+		go HandleConnection(conn)
 	}
 }
 
-func handle_connections(conn net.Conn) {
+
+
+func HandleConnection(conn net.Conn) {
 	buffer := make([]byte, 1024)
 	defer conn.Close()
-	defer delete(connections, conn)
+	defer delete(connectionPool, conn)
 
-	client := CreateClient(conn)
+	peer := CreatePeer(conn)
 	for {
-		n, err := client.conn.Read(buffer)
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				slog.Info(" client-disconnected, eof")
-			} else {
-				log.Println(" read_err: ", err)
-			}
+		n, err := peer.conn.Read(buffer)
+		if err != nil && errors.Is(err, io.EOF) {
+			slog.Info(" client disconnected:", "addr:", peer.addr)
+			return
+		} else if err != nil && !errors.Is(err, io.EOF) {
+			slog.Error(" read_err:", "error", err)
 			return
 		}
 
-		fmt.Printf(" %s\n", buffer[:n])
-		msgType, content := protocol.ParseMessage(buffer[:n])
+		extractedMessage := buffer[:n]
+		msgType, content := protocol.ParseMessage(extractedMessage)
 		switch msgType {
 		case protocol.ConnectTo:
-			fmt.Printf(" sender: %s requested to connect to: %s\n", client.conn.RemoteAddr().String(), content)
-			err := handleTwoWayConnect(client, content)
-			if err != nil {
-				slog.Error("HandlingTwoWayConnect:", "error", err)
-				return
-			}
+			peer.ConnectTo(content)
+		// default:
+		// 	go Broadcast(extractedMessage)
 		}
 
-		errCh := make(chan error)
-		go func() {
-			errCh <- Broadcast(client, buffer[:n])
-		}()
-
-		errs := <-errCh
-		if errs != nil {
-			log.Println(err)
-		}
+		// if unknown message type, either echo back to them
+		// or just brodcrast it and tell other people
 
 	}
 }
 
-func Broadcast(client Client, msg []byte) error {
-	for conn := range connections {
-		if conn == client.conn {
-			continue
-		}
+func Broadcast(msg []byte) {
+	fmt.Println("broadcasting")
+	for conn := range connectionPool {
 		_, err := conn.Write(msg)
 		if err != nil {
-			return fmt.Errorf(" write_err %s: %w", conn.RemoteAddr().String(), err)
+			log.Printf(" write_err %s: %s\n", conn.RemoteAddr().String(), err)
+			delete(connectionPool, conn)
 		}
 	}
-	return nil
 }
-
-// so we need to look for a way to
-// allow the user to connect to someone
-// in particular
 
 func main() {
-	fmt.Printf("\n Welcome back apple cider vinegar\n")
 	if err := StartServer(); err != nil {
-		log.Fatal(err)
+		log.Fatalf(" BOMBOCLAT!!\n %s\n", err)
 	}
-
 }
-
-func handleTwoWayConnect(client Client, destAddr string) error {
-	_, err := net.ResolveTCPAddr("tcp", destAddr)
-	if err != nil {
-		return fmt.Errorf("could not parse destAddr %w", err)
-	}
-
-	if err := client.ConnectTo(destAddr); err != nil {
-		return err
-	}
-	return  nil
-}
-

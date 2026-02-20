@@ -27,7 +27,7 @@ func (client *Client) ConnectTo(addr string) error {
 	fmt.Println("searching for ", addr)
 	var dest net.Conn
 	isConnected := false
-	for conn := range connections {
+	for conn := range connectionPool {
 		if conn.RemoteAddr().String() == addr {
 			fmt.Println("found destination")
 			dest = conn
