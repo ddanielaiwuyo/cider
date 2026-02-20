@@ -1,0 +1,81 @@
+package main
+
+import (
+	"errors"
+	"fmt"
+	"io"
+	"log/slog"
+	"net"
+)
+
+type Client struct {
+	conn     net.Conn
+	name     string
+	contacts map[net.Conn]bool
+}
+
+func CreateClient(conn net.Conn) Client {
+	return Client{
+		conn:     conn,
+		name:     conn.RemoteAddr().String(),
+		contacts: make(map[net.Conn]bool),
+	}
+}
+
+func (client *Client) ConnectTo(addr string) error {
+	// check if the client actually exists
+	fmt.Println("searching for ", addr)
+	var dest net.Conn
+	isConnected := false
+	for conn := range connections {
+		if conn.RemoteAddr().String() == addr {
+			fmt.Println("found destination")
+			dest = conn
+			isConnected = true
+		}
+	}
+
+	if !isConnected {
+		return fmt.Errorf(" dest could not be found, disconnected earlier")
+	}
+
+	from := client.conn
+	// send them to a channel?
+	go func() {
+		buff := CreateBuffer(1024)
+
+		defer client.conn.Close()
+		defer dest.Close()
+
+		for {
+			n, err := from.Read(buff)
+			if err != nil {
+				if errors.Is(err, io.EOF) {
+					slog.Info("_sender disconnected", "addr", from.RemoteAddr().String())
+					client.conn.Close()
+					return
+				}
+			}
+
+			// send to destination client
+			sent, err := dest.Write(buff[:n])
+			if err != nil {
+				slog.Error("_couldn't write to destination", "error", err)
+				return
+			}
+
+			if sent == n {
+				fmt.Printf("sender sent %d bytes, wrote to dest: %d\n", n, sent)
+			} else {
+				fmt.Printf("sender sent %d bytes, wrote to dest: %d\n", n, sent)
+			}
+
+		}
+	}()
+
+	return nil
+}
+
+func CreateBuffer(size uint16) []byte {
+	return make([]byte, size)
+}

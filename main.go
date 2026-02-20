@@ -7,13 +7,14 @@ import (
 	"log"
 	"log/slog"
 	"net"
+	"zod/protocol"
 )
 
 const socketAddr = ":4000"
 
 var connections = make(map[net.Conn]bool)
 
-func start_server() error {
+func StartServer() error {
 	listener, err := net.Listen("tcp", socketAddr)
 	if err != nil {
 		return err
@@ -28,22 +29,10 @@ func start_server() error {
 		}
 
 		connections[conn] = true
+		fmt.Printf("conn: %s\n", conn.RemoteAddr().String())
 
 		go handle_connections(conn)
 	}
-}
-
-func broadcast(sender net.Conn, msg []byte) error {
-	for conn := range connections {
-		if conn == sender {
-			continue
-		}
-		_, err := conn.Write(msg)
-		if err != nil {
-			return fmt.Errorf(" write_err %s: %w", conn.RemoteAddr().String(), err)
-		}
-	}
-	return nil
 }
 
 func handle_connections(conn net.Conn) {
@@ -51,8 +40,9 @@ func handle_connections(conn net.Conn) {
 	defer conn.Close()
 	defer delete(connections, conn)
 
+	client := CreateClient(conn)
 	for {
-		n, err := conn.Read(buffer)
+		n, err := client.conn.Read(buffer)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				slog.Info(" client-disconnected, eof")
@@ -63,10 +53,20 @@ func handle_connections(conn net.Conn) {
 		}
 
 		fmt.Printf(" %s\n", buffer[:n])
+		msgType, content := protocol.ParseMessage(buffer[:n])
+		switch msgType {
+		case protocol.ConnectTo:
+			fmt.Printf(" sender: %s requested to connect to: %s\n", client.conn.RemoteAddr().String(), content)
+			err := handleTwoWayConnect(client, content)
+			if err != nil {
+				slog.Error("HandlingTwoWayConnect:", "error", err)
+				return
+			}
+		}
 
 		errCh := make(chan error)
 		go func() {
-			errCh <- broadcast(conn, buffer[:n])
+			errCh <- Broadcast(client, buffer[:n])
 		}()
 
 		errs := <-errCh
@@ -77,10 +77,40 @@ func handle_connections(conn net.Conn) {
 	}
 }
 
+func Broadcast(client Client, msg []byte) error {
+	for conn := range connections {
+		if conn == client.conn {
+			continue
+		}
+		_, err := conn.Write(msg)
+		if err != nil {
+			return fmt.Errorf(" write_err %s: %w", conn.RemoteAddr().String(), err)
+		}
+	}
+	return nil
+}
+
+// so we need to look for a way to
+// allow the user to connect to someone
+// in particular
+
 func main() {
 	fmt.Printf("\n Welcome back apple cider vinegar\n")
-	if err := start_server(); err != nil {
+	if err := StartServer(); err != nil {
 		log.Fatal(err)
 	}
 
 }
+
+func handleTwoWayConnect(client Client, destAddr string) error {
+	_, err := net.ResolveTCPAddr("tcp", destAddr)
+	if err != nil {
+		return fmt.Errorf("could not parse destAddr %w", err)
+	}
+
+	if err := client.ConnectTo(destAddr); err != nil {
+		return err
+	}
+	return  nil
+}
+
