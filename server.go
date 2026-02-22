@@ -72,7 +72,7 @@ func HandleConnection(conn net.Conn) {
 	createUser(conn)
 	buffer := make([]byte, 1024)
 	defer conn.Close()
-	defer delete(connectionPool, conn)
+	defer removeUser(conn)
 
 	for {
 		n, err := conn.Read(buffer)
