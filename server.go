@@ -8,7 +8,9 @@ import (
 	"io"
 	"log/slog"
 	"net"
+	"strings"
 	"zod/logger"
+	"zod/protocol"
 )
 
 const serverAddr = ":4000"
@@ -18,21 +20,24 @@ var ErrUserNotFound = errors.New("User not found")
 var ErrInternalError = errors.New("Internal Server Error")
 
 var connectionPool = make(map[net.Conn]bool)
-var connectedUsers = make(map[userId]net.Conn)
+var connectedUsers = make(map[protocol.UserId]net.Conn)
 
 var jsonLogger = logger.JSONLogger()
 
 type userId uint64
 
 type Request struct {
-	UserId userId `json:"userId"`
-	Msg    string `json:"msg"`
+	Recipient userId `json:"recipient"`
+	Msg       string `json:"msg"`
 }
 
-type Response struct {
-	From userId `json:"from"`
-	Msg  string `json:"msg"`
-}
+type ResponseType int
+
+// type Response struct {
+// 	From userId       `json:"from"`
+// 	Code ResponseType `json:"responseType"`
+// 	Msg  string       `json:"msg"`
+// }
 
 func StartServer() error {
 	listener, err := net.Listen("tcp", serverAddr)
@@ -57,7 +62,7 @@ func StartServer() error {
 
 func createUser(conn net.Conn) {
 	id := len(connectedUsers) + 1
-	connectedUsers[userId(id)] = conn
+	connectedUsers[protocol.UserId(id)] = conn
 }
 
 func removeUser(target net.Conn) {
@@ -69,8 +74,29 @@ func removeUser(target net.Conn) {
 	}
 }
 
+func broadcast(res protocol.Response) {
+	content, err := json.Marshal(res)
+	if err != nil {
+		slog.Error(" [broadcast] could not marshall response", "err", err)
+		return
+	}
+	for _, conn := range connectedUsers {
+		_, err := conn.Write(content)
+		if err != nil {
+			slog.Error(" [broadcast] could not write to conn", "errr", err)
+		}
+	}
+}
+
 func HandleConnection(conn net.Conn) {
 	createUser(conn)
+
+	cu := showConnectedUsers()
+
+	serverRes := ServerResponseMsg(cu, protocol.ServerPaintMessage)
+	broadcast(serverRes)
+
+	// writeResponse(conn, res)
 	buffer := make([]byte, 1024)
 	defer conn.Close()
 	defer removeUser(conn)
@@ -81,6 +107,7 @@ func HandleConnection(conn net.Conn) {
 			slog.Info(" client disconnected:", "addr:", conn.RemoteAddr().String())
 			return
 		} else if err != nil && !errors.Is(err, io.EOF) {
+			broadcast(serverRes)
 			slog.Error(" read_err:", "error", err)
 			return
 		}
@@ -91,18 +118,22 @@ func HandleConnection(conn net.Conn) {
 
 			switch err != nil {
 			case errors.Is(err, ErrUserNotFound):
-				if err := writeResponseToConn(conn, CreateResponse(ErrUserNotFound.Error())); err != nil {
+				res := ServerResponseMsg(ErrUserNotFound.Error(), protocol.ServerErrorResponse)
+				if err := writeResponse(conn, res); err != nil {
 					slog.Error(" error: ", "", err)
 					return
 				}
+
 			case errors.Is(err, ErrInternalError):
-				if err := writeResponseToConn(conn, CreateResponse("Please forgive us bro\n")); err != nil {
+				res := ServerResponseMsg("Please forgive us bro\n", protocol.ServerErrorResponse)
+				if err := writeResponse(conn, res); err != nil {
 					slog.Error(" error: ", "", err)
 					return
 				}
 
 			case errors.Is(err, ErrInvalidMessage):
-				if err := writeResponseToConn(conn, CreateResponse(ErrInvalidMessage.Error())); err != nil {
+				res := ServerResponseMsg(ErrInvalidMessage.Error(), protocol.ServerErrorResponse)
+				if err := writeResponse(conn, res); err != nil {
 					slog.Error(" error: ", "", err)
 					return
 				}
@@ -113,8 +144,25 @@ func HandleConnection(conn net.Conn) {
 	}
 }
 
+func showConnectedUsers() string {
+	var msg strings.Builder
+	msg.WriteString("    Connected Users,")
+	for i := range connectedUsers {
+		fmt.Fprintf(&msg, "User %d is Active,", i)
+	}
+
+	return msg.String()
+
+}
+
+// The request is parsed into the Request struct format
+//
+// If the Recipient is not connected at the moment,
+// we simply send tell them that we could not find the user
+//
+// This spec is open to change.
 func RelayMessage(request []byte) error {
-	req := Request{}
+	req := protocol.Request{}
 	if err := json.Unmarshal(request, &req); err != nil {
 		slog.Error(" cannot unmarshall:", "err", request)
 		return ErrInvalidMessage
@@ -125,7 +173,7 @@ func RelayMessage(request []byte) error {
 	jsonLogger.Info("incoming", "request", req)
 
 	for id, conn := range connectedUsers {
-		if id == req.UserId {
+		if id == req.Recipient {
 			dest = conn
 			break
 		}
@@ -135,7 +183,7 @@ func RelayMessage(request []byte) error {
 		return ErrUserNotFound
 	}
 
-	res := Response{From: req.UserId, Msg: req.Msg}
+	res := protocol.Response{From: req.Recipient, Msg: req.Msg}
 	content, err := json.Marshal(res)
 	if err != nil {
 		slog.Error(" error in marshalling: ", "err", err)
@@ -148,7 +196,7 @@ func RelayMessage(request []byte) error {
 	return nil
 }
 
-func writeResponseToConn(conn net.Conn, res Response) error {
+func writeResponse(conn net.Conn, res protocol.Response) error {
 	content, err := json.Marshal(res)
 	if err != nil {
 		return fmt.Errorf(" could not marshall response: %w", err)

@@ -9,7 +9,6 @@ import (
 )
 
 func readFromStdin(ctx context.Context, in chan<- string) {
-	fmt.Println(" reading from stdin....")
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 		select {
@@ -22,7 +21,6 @@ func readFromStdin(ctx context.Context, in chan<- string) {
 
 func readFromServer(ctx context.Context, conn net.Conn, out chan<- []byte) error {
 	buff := make([]byte, 1024)
-	fmt.Println(" reading from server....")
 	for {
 		select {
 		case <-ctx.Done():
