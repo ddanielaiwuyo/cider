@@ -1,26 +1,13 @@
 package protocol
 
-import (
-	"fmt"
-	"strings"
-)
+type UserId uint64
 
-type MessageType int
+type Request struct {
+	UserId UserId `json:"userId"`
+	Msg    string `json:"msg"`
+}
 
-const (
-	ConnectTo MessageType = iota
-	Unknown
-)
-
-func ParseMessage(msg []byte) (MessageType, string) {
-	str_fmt := fmt.Sprintf("%s", msg)
-
-	switch true {
-	case strings.Contains(str_fmt, "connect-to"):
-		_, addr, _ := strings.Cut(str_fmt, "connect-to")
-		addr = strings.TrimSpace(addr)
-		return ConnectTo, addr
-	}
-
-	return Unknown, str_fmt
+type Response struct {
+	From UserId
+	Msg  string
 }

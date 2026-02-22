@@ -1,0 +1,4 @@
+{"time":"2026-02-22T18:48:37.638812Z","level":"INFO","msg":"incoming","request":{"userId":1,"msg":"This should doth has work??\n"}}
+{"time":"2026-02-22T18:48:42.448055Z","level":"INFO","msg":"incoming","request":{"userId":1,"msg":"This should doth has work??\n"}}
+{"time":"2026-02-22T18:50:44.07508Z","level":"INFO","msg":"incoming","request":{"userId":1,"msg":"This should doth has work??\n"}}
+{"time":"2026-02-22T18:50:48.454729Z","level":"INFO","msg":"incoming","request":{"userId":1,"msg":"This should doth has work??\n"}}
