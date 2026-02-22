@@ -18,8 +18,9 @@ var ErrUserNotFound = errors.New("User not found")
 var ErrInternalError = errors.New("Internal Server Error")
 
 var connectionPool = make(map[net.Conn]bool)
-var jsonLogger = logger.JSONLogger()
 var connectedUsers = make(map[userId]net.Conn)
+
+var jsonLogger = logger.JSONLogger()
 
 type userId uint64
 
@@ -90,18 +91,18 @@ func HandleConnection(conn net.Conn) {
 
 			switch err != nil {
 			case errors.Is(err, ErrUserNotFound):
-				if err := writeTo(conn, ErrUserNotFound.Error()); err != nil {
+				if err := writeResponseToConn(conn, CreateResponse(ErrUserNotFound.Error())); err != nil {
 					slog.Error(" error: ", "", err)
 					return
 				}
 			case errors.Is(err, ErrInternalError):
-				if err := writeTo(conn, "Please forgive us bro\n"); err != nil {
+				if err := writeResponseToConn(conn, CreateResponse("Please forgive us bro\n")); err != nil {
 					slog.Error(" error: ", "", err)
 					return
 				}
 
 			case errors.Is(err, ErrInvalidMessage):
-				if err := writeTo(conn, ErrInvalidMessage.Error()); err != nil {
+				if err := writeResponseToConn(conn, CreateResponse(ErrInvalidMessage.Error())); err != nil {
 					slog.Error(" error: ", "", err)
 					return
 				}
@@ -147,16 +148,21 @@ func RelayMessage(request []byte) error {
 	return nil
 }
 
+func writeResponseToConn(conn net.Conn, res Response) error {
+	content, err := json.Marshal(res)
+	if err != nil {
+		return fmt.Errorf(" could not marshall response: %w", err)
+	}
+
+	if _, err := conn.Write(content); err != nil {
+		return fmt.Errorf(" could not write response: %w", err)
+	}
+
+	return nil
+}
+
 func main() {
 	if err := StartServer(); err != nil {
 		slog.Error(" BOMBOCLAT!!\n %s\n", "err", err)
 	}
-}
-
-func writeTo(conn net.Conn, msg string) error {
-	if _, err := conn.Write([]byte(msg)); err != nil {
-		return fmt.Errorf("write_err: %w", err)
-	}
-
-	return nil
 }
