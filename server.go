@@ -33,12 +33,6 @@ type Request struct {
 
 type ResponseType int
 
-// type Response struct {
-// 	From userId       `json:"from"`
-// 	Code ResponseType `json:"responseType"`
-// 	Msg  string       `json:"msg"`
-// }
-
 func StartServer() error {
 	listener, err := net.Listen("tcp", serverAddr)
 	if err != nil {
@@ -91,15 +85,14 @@ func broadcast(res protocol.Response) {
 func HandleConnection(conn net.Conn) {
 	createUser(conn)
 
-	cu := showConnectedUsers()
-
-	serverRes := ServerResponseMsg(cu, protocol.ServerPaintMessage)
-	broadcast(serverRes)
-
 	// writeResponse(conn, res)
 	buffer := make([]byte, 1024)
 	defer conn.Close()
 	defer removeUser(conn)
+	cu := showConnectedUsers()
+
+	serverRes := ServerResponseMsg(cu, protocol.ServerPaintMessage)
+	broadcast(serverRes)
 
 	for {
 		n, err := conn.Read(buffer)
