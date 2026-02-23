@@ -26,11 +26,6 @@ var jsonLogger = logger.JSONLogger()
 
 type userId uint64
 
-type Request struct {
-	Recipient userId `json:"recipient"`
-	Msg       string `json:"msg"`
-}
-
 type ResponseType int
 
 func StartServer() error {
