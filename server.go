@@ -174,12 +174,12 @@ func RelayMessage(request []byte) error {
 	res := protocol.Response{From: req.Recipient, Msg: req.Msg}
 	content, err := json.Marshal(res)
 	if err != nil {
-		slog.Error(" error in marshalling: ", "err", err)
+		slog.Error(" [relay_message] error in marshalling: ", "err", err)
 		return ErrInternalError
 	}
 
 	if _, err := io.Copy(dest, bytes.NewReader(content)); err != nil {
-		return fmt.Errorf(" error in copying to dest: %w", err)
+		return fmt.Errorf(" [relay_message] error in copying to dest: %w", err)
 	}
 	return nil
 }
@@ -187,11 +187,11 @@ func RelayMessage(request []byte) error {
 func writeResponse(conn net.Conn, res protocol.Response) error {
 	content, err := json.Marshal(res)
 	if err != nil {
-		return fmt.Errorf(" could not marshall response: %w", err)
+		return fmt.Errorf(" [write_response] could not marshall response: %w", err)
 	}
 
 	if _, err := conn.Write(content); err != nil {
-		return fmt.Errorf(" could not write response: %w", err)
+		return fmt.Errorf(" [write_response] could not write response: %w", err)
 	}
 
 	return nil
