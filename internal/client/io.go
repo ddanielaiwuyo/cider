@@ -61,46 +61,9 @@ func writeToServer(msg string, conn net.Conn) error {
 }
 
 func readFromServer(ctx context.Context, conn net.Conn) <-chan shared.Message {
-	log.Printf("[ch] reading from server")
-	res := make(chan shared.Message)
-	go func() {
-		buff := make([]byte, 1024)
-		defer close(res)
-		for {
-			select {
-			case <-ctx.Done():
-				slog.Error("[ch] context done", "", ctx.Err().Error())
-				return
-			default:
-
-				n, err := conn.Read(buff)
-				if err != nil {
-					slog.Error("read error from server", "", err)
-					return
-				}
-
-				dest := make([]byte, n)
-				copy(dest, buff[:n])
-
-				var msg shared.Message
-				if err := json.Unmarshal(dest, &msg); err != nil {
-					log.Println(string(dest))
-					slog.Error("could not parse server res", "", err)
-					return
-				}
-
-				res <- msg
-			}
-		}
-	}()
-	return res
-}
-
-func readFromServer2(ctx context.Context, conn net.Conn) <-chan shared.Message {
 	response := make(chan shared.Message)
 	decoder := json.NewDecoder(conn)
 	go func() {
-		// buff := make([]byte, 1024)
 		defer close(response)
 
 		for {

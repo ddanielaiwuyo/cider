@@ -22,7 +22,7 @@ func connect() error {
 	defer cancel()
 
 	stdin := readFromStdin(ctx)
-	server := readFromServer2(ctx, conn)
+	server := readFromServer(ctx, conn)
 	for {
 		select {
 		case msg, ok := <-stdin:
@@ -30,7 +30,6 @@ func connect() error {
 				return fmt.Errorf("stdin has been closed!")
 			}
 
-			// fmt.Println(" *stdin: ", msg)
 			if err := writeToServer(msg, conn); err != nil {
 				return err
 			}
