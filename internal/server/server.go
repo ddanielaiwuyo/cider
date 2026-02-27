@@ -46,11 +46,9 @@ func (m *manager) Listen(ctx context.Context) {
 		select {
 		case client := <-m.register:
 			slog.Info("adding new client", "", client)
-			// connectedUsers.Store(client.id, client.conn)
 			connectedUsers[client.id] = client.conn
 		case id := <-m.remove:
 			slog.Info("removing client with id:", "", id)
-			// connectedUsers.Delete(id)
 			delete(connectedUsers, id)
 		case msg := <-m.deliver:
 			go handleMessage(m, msg)
