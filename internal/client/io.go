@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -93,4 +94,48 @@ func readFromServer(ctx context.Context, conn net.Conn) <-chan shared.Message {
 		}
 	}()
 	return res
+}
+
+func readFromServer2(ctx context.Context, conn net.Conn) <-chan shared.Message {
+	response := make(chan shared.Message)
+	decoder := json.NewDecoder(conn)
+	go func() {
+		// buff := make([]byte, 1024)
+		defer close(response)
+
+		for {
+			select {
+			case <-ctx.Done():
+				slog.Error("context done", "err", ctx.Err().Error())
+				return
+			default:
+
+				var msg shared.Message
+				err := decoder.Decode(&msg)
+				if err != nil {
+					if err == io.EOF {
+						slog.Error("server closed connection!", "err", err)
+						return
+					}
+
+					var syntaxErr json.SyntaxError
+					var typeErr json.UnmarshalTypeError
+
+					if errors.Is(err, &syntaxErr) {
+						slog.Error("server sent malformed message", "err", err)
+						continue
+					} else if errors.Is(err, &typeErr) {
+						slog.Error("server sent invalid message", "err", err)
+						continue
+					} else {
+						slog.Error("unexpected error", "err", err)
+					}
+				}
+
+
+				response <- msg
+			}
+		}
+	}()
+	return response
 }

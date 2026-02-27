@@ -79,11 +79,11 @@ func handleConnection(mgr *manager, conn net.Conn) {
 	}
 
 	mgr.register <- newClient
+	defer conn.Close()
 	defer func() {
 		mgr.remove <- newClient.id
 	}()
 
-	buff := make([]byte, 1024)
 	content, err := toJson(welcomeResponse)
 
 	if err != nil {
@@ -93,29 +93,34 @@ func handleConnection(mgr *manager, conn net.Conn) {
 
 	conn.Write(content)
 
+	decoder := json.NewDecoder(conn)
 	for {
-		n, err := conn.Read(buff)
-		if err != nil {
-			slog.Error("read error from client:", "", err)
-			return
-		}
+		var msg Message
+		var syntaxErr *json.SyntaxError
+		var typeErr *json.UnmarshalTypeError
+		if err := decoder.Decode(&msg); err != nil {
+			if errors.Is(err, syntaxErr) {
+				slog.Error("invalid json from client", "err", err, "content", msg)
+				mgr.deliver <- Message{From: serverId, Dest: newClient.id, Content: "Invalid json format"}
+				continue
+			}
 
-		dest := make([]byte, n)
-		copy(dest, buff[:n])
+			if errors.Is(err, typeErr) {
+				slog.Error("corrupted message", "err", err, "content", msg)
+				mgr.deliver <- Message{From: serverId, Dest: newClient.id, Content: "I am a teapot"}
+				continue
+			}
 
-		request := Message{}
-		if err := json.Unmarshal(dest, &request); err != nil {
-			slog.Error("could not parse request, malformed", "err", err)
-			// mgr.deliver <- Message{
-			// 	Dest:    newClient.id,
-			// 	Content: ErrMalformedMessage.Error(),
-			// 	From:    serverId,
-			// }
-			mgr.deliver <- createMalformedMessage(newClient.id)
+			if err == io.EOF {
+				slog.Error("client closed connection", "err", err)
+				return
+			}
+
+			slog.Error("unexpected error", "err", err)
+			mgr.deliver <- Message{From: serverId, Dest: newClient.id, Content: "I am a teapot"}
 			continue
 		}
-
-		mgr.deliver <- request
+		mgr.deliver <- msg
 	}
 }
 

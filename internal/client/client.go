@@ -22,7 +22,7 @@ func connect() error {
 	defer cancel()
 
 	stdin := readFromStdin(ctx)
-	server := readFromServer(ctx, conn)
+	server := readFromServer2(ctx, conn)
 	for {
 		select {
 		case msg, ok := <-stdin:
