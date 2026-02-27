@@ -14,7 +14,7 @@ to render full windows instead of terminals.
 
 
 ### Run Program
-Make sure you have go installed, check (Go)[https://go.dev] for installation
+Make sure you have go installed, check [Go](https://go.dev) for installation
 
 ## 1. Clone Repo
 ```bash
