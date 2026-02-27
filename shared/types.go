@@ -5,10 +5,12 @@ type MessageType int
 const (
 	PaintMessage MessageType = iota
 	ChatMessage
+	GameMessage
 )
 
 type Message struct {
-	From    int         `json:"from"`
-	Content string      `json:"content"`
-	Dest    int         `json:"dest"`
+	From        int         `json:"from"`
+	MessageType MessageType `json:"messageType"`
+	Content     string      `json:"content"`
+	Dest        int         `json:"dest"`
 }

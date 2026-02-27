@@ -2,7 +2,6 @@ package server
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,18 +9,17 @@ import (
 	"log"
 	"log/slog"
 	"net"
-
-	"github.com/google/uuid"
 )
 
 const serverAddr = ":4000"
+const serverId = 0
 
 var ErrMalformedMessage = errors.New("Message is invalid")
 var ErrContactUser = errors.New("Could not contact user")
 var ErrInternalError = errors.New("Please forgive us bro")
 
 var NotFoundResponse = Message{
-	From:    0,
+	From:    serverId,
 	Content: ErrContactUser.Error(),
 }
 
@@ -30,41 +28,6 @@ var connectedUsers = make(map[int]net.Conn)
 type client struct {
 	id   int
 	conn net.Conn
-}
-
-type manager struct {
-	register chan client
-	remove   chan int
-	deliver  chan Message
-	find     chan int
-}
-
-func NewManager() *manager {
-	return &manager{
-		register: make(chan client),
-		remove:   make(chan int),
-		deliver:  make(chan Message),
-	}
-}
-
-func (m *manager) Listen(ctx context.Context) {
-	start := 1000
-	for {
-		select {
-		case client := <-m.register:
-			slog.Info("adding new client", "", start)
-			connectedUsers[start] = client.conn
-			start += 100
-		case id := <-m.remove:
-			slog.Info("removing client with id:", "", id)
-			delete(connectedUsers, id)
-		case msg := <-m.deliver:
-			sendMessage(m, msg)
-		case <-ctx.Done():
-			slog.Info("exiting manager:", "", ctx.Err().Error())
-			return
-		}
-	}
 }
 
 func Start(mgr *manager) error {
@@ -86,55 +49,34 @@ func Start(mgr *manager) error {
 	}
 }
 
+type MessageType int
+
+const (
+	PaintMessage MessageType = iota
+	ChatMessage
+	GameMessage
+)
+
 type Message struct {
-	From    int    `json:"from"`
-	Content string `json:"content"`
-	Dest    int    `json:"dest"`
-}
-
-func sendMessage(mgr *manager, msg Message) {
-	var notFoundRes = NotFoundResponse
-	notFoundRes.Dest = msg.From
-
-	id := msg.Dest
-	destConn, destfound := connectedUsers[id]
-	senderConn, found := connectedUsers[msg.From]
-	if !found {
-		slog.Info("sender not recognised", "id", msg.From, "found", found)
-		return
-	}
-
-	if !destfound {
-		slog.Error("dst conn not found", "", id)
-
-		res, err := toJson(notFoundRes)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-
-		io.Copy(senderConn, bytes.NewReader(res))
-		return
-	}
-	fmt.Println("destConn found", destConn)
-
-	content, err := toJson(msg)
-	if err != nil {
-		slog.Error("", "", err)
-		return
-	}
-	if _, err := io.Copy(destConn, bytes.NewReader(content)); err != nil {
-		slog.Error("error writing to dest-conn", "", err)
-		mgr.remove <- id
-		return
-	}
-
-	log.Println(" [success] message sent")
+	From        int         `json:"from"`
+	MessageType MessageType `json:"messageType"`
+	Content     string      `json:"content"`
+	Dest        int         `json:"dest"`
 }
 
 func HandleConnection(mgr *manager, conn net.Conn) {
-	var newClient = client{id: int(uuid.New().ID()), conn: conn}
-	var welcomeResponse = Message{From: 0, Content: "Welcome to CiderVine", Dest: newClient.id}
+	var paintMsg = createPaintMessage()
+	var newClient = client{
+		id:   len(connectedUsers) + 1,
+		conn: conn,
+	}
+
+	var welcomeResponse = Message{
+		From:        serverId,
+		MessageType: PaintMessage,
+		Content:     fmt.Sprintf("Welcome to CiderVine;%s;YourId:%d;", paintMsg, newClient.id),
+		Dest:        newClient.id,
+	}
 
 	mgr.register <- newClient
 	defer func() {
@@ -143,12 +85,14 @@ func HandleConnection(mgr *manager, conn net.Conn) {
 
 	buff := make([]byte, 1024)
 	content, err := toJson(welcomeResponse)
+
 	if err != nil {
 		slog.Error("", "", err)
 		return
 	}
 
 	conn.Write(content)
+
 	for {
 		n, err := conn.Read(buff)
 		if err != nil {
@@ -168,4 +112,46 @@ func HandleConnection(mgr *manager, conn net.Conn) {
 
 		mgr.deliver <- request
 	}
+}
+
+func sendMessage(mgr *manager, msg Message) {
+	var notFoundRes = NotFoundResponse
+	notFoundRes.Dest = msg.From
+
+	id := msg.Dest
+	senderId := msg.From
+
+	destConn, destfound := connectedUsers[id]
+	senderConn, found := connectedUsers[senderId]
+
+	if !found {
+		slog.Info("sender not recognised", "id", serverId, "found", found)
+		return
+	}
+
+	if !destfound {
+		slog.Error("dst conn not found", "", id)
+
+		res, err := toJson(notFoundRes)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		io.Copy(senderConn, bytes.NewReader(res))
+		return
+	}
+
+	content, err := toJson(msg)
+	if err != nil {
+		slog.Error("", "", err)
+		return
+	}
+	if _, err := io.Copy(destConn, bytes.NewReader(content)); err != nil {
+		slog.Error("error writing to dest-conn", "", err)
+		mgr.remove <- id
+		return
+	}
+
+	log.Println(" [success] message sent")
 }

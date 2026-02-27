@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strings"
 
 	"github.com/persona-mp3/shared"
 )
@@ -45,9 +46,22 @@ func connect() error {
 }
 
 func parseServerResponse(res shared.Message) {
-	fmt.Printf("  #%d:  %2s\n", res.From, res.Content)
+
+	switch res.MessageType {
+	case shared.PaintMessage:
+		printPaint(res.Content)
+	case shared.ChatMessage:
+		fmt.Printf("  #%d:  %2s\n", res.From, res.Content)
+	}
 }
 
+const paintMsgDelim = ";"
+
+func printPaint(msg string) {
+	for s := range strings.SplitSeq(msg, paintMsgDelim) {
+		fmt.Printf("  %s\n", s)
+	}
+}
 func main() {
 	if err := connect(); err != nil {
 		log.Fatal(err)

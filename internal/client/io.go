@@ -12,7 +12,6 @@ import (
 	"net"
 	"os"
 
-	"github.com/google/uuid"
 	"github.com/persona-mp3/shared"
 )
 
@@ -42,12 +41,11 @@ func writeToServer(msg string, conn net.Conn) error {
 	// But for now, we could
 	// just hardcode it
 	req := shared.Message{
-		Dest:    uuid.New().ClockSequence(),
-		From:    1000,
-		Content: msg,
+		Dest:        2,
+		From:        1,
+		MessageType: shared.ChatMessage,
+		Content:     msg,
 	}
-
-	fmt.Println("[debug] using id", req.Dest)
 
 	content, err := json.Marshal(req)
 	if err != nil {
@@ -85,6 +83,7 @@ func readFromServer(ctx context.Context, conn net.Conn) <-chan shared.Message {
 
 				var msg shared.Message
 				if err := json.Unmarshal(dest, &msg); err != nil {
+					log.Println(string(dest))
 					slog.Error("could not parse server res", "", err)
 					return
 				}
