@@ -15,3 +15,11 @@ func createPaintMessage() string {
 
 	return msg.String()
 }
+
+func createMalformedMessage(dest int) Message {
+	return Message{
+		Dest:    dest,
+		Content: ErrMalformedMessage.Error(),
+		From:    serverId,
+	}
+}

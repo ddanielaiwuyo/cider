@@ -45,7 +45,7 @@ func Start(mgr *manager) error {
 			continue
 		}
 
-		go HandleConnection(mgr, conn)
+		go handleConnection(mgr, conn)
 	}
 }
 
@@ -64,7 +64,7 @@ type Message struct {
 	Dest        int         `json:"dest"`
 }
 
-func HandleConnection(mgr *manager, conn net.Conn) {
+func handleConnection(mgr *manager, conn net.Conn) {
 	var paintMsg = createPaintMessage()
 	var newClient = client{
 		id:   len(connectedUsers) + 1,
@@ -106,7 +106,12 @@ func HandleConnection(mgr *manager, conn net.Conn) {
 		request := Message{}
 		if err := json.Unmarshal(dest, &request); err != nil {
 			slog.Error("could not parse request, malformed", "err", err)
-			mgr.deliver <- Message{Dest: newClient.id, Content: ErrMalformedMessage.Error(), From: 0}
+			// mgr.deliver <- Message{
+			// 	Dest:    newClient.id,
+			// 	Content: ErrMalformedMessage.Error(),
+			// 	From:    serverId,
+			// }
+			mgr.deliver <- createMalformedMessage(newClient.id)
 			continue
 		}
 
