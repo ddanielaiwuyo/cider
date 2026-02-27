@@ -1,7 +1,7 @@
 ### Cider
 
 
-Cider is an in-progress portotype of a chess game, played over the terminal.
+Cider is an in-progress prototype of a chess game, played over the terminal.
 The aim for clients to communicate over a tcp connection, which in the future
 messages between them will be encrypted. And later on, use a game engine 
 to render full windows instead of terminals.
@@ -32,7 +32,7 @@ go run main.go # you should see server output and port it's listening on as of 
 On another terminal, you can also run the client, but at the moment
 you can only send messages to the server
 ```bash
-go run internal/client/client.go
+go run internal/client/*.go # compiles all the client-files
 ```
 You should recieve a welcome message from the server and you should also be
 able to send messages to the server
