@@ -54,6 +54,7 @@ func (m *manager) Listen(ctx context.Context) {
 		case client := <-m.register:
 			slog.Info("adding new client", "", start)
 			connectedUsers[start] = client.conn
+			start += 100
 		case id := <-m.remove:
 			slog.Info("removing client with id:", "", id)
 			delete(connectedUsers, id)
@@ -63,7 +64,6 @@ func (m *manager) Listen(ctx context.Context) {
 			slog.Info("exiting manager:", "", ctx.Err().Error())
 			return
 		}
-		start += 100
 	}
 }
 
@@ -91,7 +91,6 @@ type Message struct {
 	Content string `json:"content"`
 	Dest    int    `json:"dest"`
 }
-
 
 func sendMessage(mgr *manager, msg Message) {
 	var notFoundRes = NotFoundResponse
@@ -133,7 +132,6 @@ func sendMessage(mgr *manager, msg Message) {
 	log.Println(" [success] message sent")
 }
 
-
 func HandleConnection(mgr *manager, conn net.Conn) {
 	var newClient = client{id: int(uuid.New().ID()), conn: conn}
 	var welcomeResponse = Message{From: 0, Content: "Welcome to CiderVine", Dest: newClient.id}
@@ -144,7 +142,7 @@ func HandleConnection(mgr *manager, conn net.Conn) {
 	}()
 
 	buff := make([]byte, 1024)
-		content, err := toJson(welcomeResponse)
+	content, err := toJson(welcomeResponse)
 	if err != nil {
 		slog.Error("", "", err)
 		return
