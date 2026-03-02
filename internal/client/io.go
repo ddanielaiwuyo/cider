@@ -51,11 +51,20 @@ func writeToServer(msg string, conn net.Conn) error {
 		Content:     msg,
 	}
 	if strings.Contains(msg, ":") {
-		id, _, _ := strings.Cut(msg, colonDelim)
+		id, msgType, _ := strings.Cut(msg, colonDelim)
 		parsedId, err := strconv.Atoi(id)
 		if err != nil {
 			fmt.Printf("could not parse %s to int, %s\n", id, err)
 			return fmt.Errorf("could not parsed id: %s %w", id, err)
+		}
+
+		_msgType, err := strconv.Atoi(string(msgType[0]))
+		if err != nil {
+			fmt.Printf("could not parse %s to int, %s\n", id, err)
+			return fmt.Errorf("could not parsed id: %s %w", id, err)
+		}
+		if _msgType == int(shared.GameMessage) {
+			req.MessageType = shared.GameMessage
 		}
 
 		req.Dest = parsedId

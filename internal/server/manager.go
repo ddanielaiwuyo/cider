@@ -5,7 +5,6 @@ import (
 	"log"
 	"log/slog"
 	"math/rand"
-	"time"
 )
 
 type GameSession struct {
@@ -32,6 +31,10 @@ func NewManager() *manager {
 }
 
 func (m *manager) Listen(ctx context.Context) {
+	parentCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	play := make(chan Message, 2)
 	for {
 		select {
 		case client := <-m.register:
@@ -50,11 +53,13 @@ func (m *manager) Listen(ctx context.Context) {
 					log.Println("sssid got violated??")
 					continue
 				}
-				m.startGame(ssid)
+				go m.startGame(parentCtx, ssid, play)
 			case GameMessage:
 				log.Println("game message")
+				play <- msg
 				sendMessage(m, msg)
-				// handleGameMessage(m, msg)
+				// so if the game message is here
+				// can we pipe into the the startGameFunc?
 			case ChatMessage:
 				log.Println("normal message")
 				sendMessage(m, msg)
@@ -67,7 +72,7 @@ func (m *manager) Listen(ctx context.Context) {
 		}
 	}
 }
-func (mgr *manager) startGame(ssid int) {
+func (mgr *manager) startGame(ctx context.Context, ssid int, play chan Message) {
 	log.Println(" [debug] starting game")
 	session, ok := mgr.sessions[ssid]
 	if !ok {
@@ -76,35 +81,43 @@ func (mgr *manager) startGame(ssid int) {
 	}
 
 	log.Println(" [debug] sending welcome msg")
+	_ = session
 
-	welcomeMsg := `
-	The game is about to be start...
-	Buckle up brochachos
-	`
+	// welcomeMsg := `
+	// The game is about to be start...
+	// Buckle up brochachos
+	// `
 
-	conn1, conn2 := session.players[0], session.players[1]
-	msg := Message{
-		From:        serverId,
-		MessageType: GameMessage,
-		Content:     welcomeMsg,
-		Dest:        conn1.id,
-	}
+	// conn1, conn2 := session.players[0], session.players[1]
+	// msg := Message{
+	// 	From:        serverId,
+	// 	MessageType: GameMessage,
+	// 	Content:     welcomeMsg,
+	// 	Dest:        conn1.id,
+	// }
 
-	mgr.deliver <- msg
-	msg.Dest = conn2.id
-	mgr.deliver <- msg
+	// mgr.deliver <- msg
+	// msg.Dest = conn2.id
+	// mgr.deliver <- msg
 
-	log.Println(" [debug] should not be blocking??")
+	go func() {
+		log.Println(" [debug] inside go routine")
+		for {
+			select {
+			case newplay, ok := <-play:
+				if !ok {
+					log.Println(" [debug] play channel closed!")
+					return
+				}
 
-	ticker := time.NewTicker(4 * time.Second)
-	var play Message
-	lastPlayed := conn2.id
-	for {
-		select {
-		case <-ticker.C:
-			// hmmmm
+				log.Printf(" [debug] [NEW-PLAY]: %+v\n", newplay)
+
+			case <-ctx.Done():
+				log.Println(" [game-sess] calling home, parent exiting")
+				return
+			}
 		}
-	}
+	}()
 
 }
 
