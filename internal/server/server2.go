@@ -10,7 +10,6 @@ import (
 	"net"
 
 	pb "github.com/persona-mp3/protocols/github.com/persona-mp3/protocols"
-	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -48,6 +47,7 @@ func RunServer(mgr *manager) error {
 			continue
 		}
 
+		// write paint message here instead
 		go handleConnection(mgr, conn)
 
 	}
@@ -57,108 +57,102 @@ const headerLength = 4
 
 func handleConnection(mgr *manager, conn net.Conn) {
 	defer conn.Close()
-	content, err := extractPacket(conn)
+	paintPacket, err := createPaintPacket(0)
 	if err != nil {
-		if errors.Is(err, io.EOF) {
-			slog.Error("read error:", "err", err)
-			return
-		} else {
-			slog.Error("unexpected error", "err", err)
-			return
-		}
+		slog.Error("error", "err", err)
 	}
-
-	packet, err := parsePacketData(content)
-	if err != nil {
-		slog.Error("protobuf error occured", "err", err)
-		return
-	}
-
-	if !authClient(packet) {
-		// actually send the client a message here
-		// but so we wont break stuff, let's just
-		// close the connection
-		slog.Info("client could not be authenticated")
-		return
-	}
-
-	out, err := extractPacket(conn)
-	if err != nil {
-		if errors.Is(err, io.EOF) {
-			slog.Error("read error:", "err", err)
-			return
-		} else {
-			slog.Error("unexpected error", "err", err)
+	if err == nil {
+		_, err := conn.Write(paintPacket)
+		if err != nil {
+			slog.Error("error writing paint message to connection", "err", err)
 			return
 		}
 	}
+	for {
+		content, err := extractPacket(conn)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				slog.Error("read error:", "err", err)
+				return
+			} else {
+				slog.Error("unexpected error", "err", err)
+				return
+			}
+		}
 
-	request, err := parsePacketData(out)
-	if err != nil {
-		slog.Error("protobuf error occured", "err", err)
-		return
+		packet, err := parsePacketData(content)
+		if err != nil {
+			slog.Error("protobuf error occured", "err", err)
+			return
+		}
+
+		if !authClient(packet.From) {
+			slog.Info("client could not be authenticated")
+			return
+		}
+
+		handleMessage(mgr, packet)
 	}
-
-	handleMessage(request)
 
 }
 
-/*
-* TODO authClient should do the following
-* 1. Pass users stored in our db to mgr to register
-* 2. Check if a user has already been authenticated
-*
-* This is to remove the hacking previously done
-* where we had to manipulate the user ids and stuff
+func handleMessage(mgr *manager, msg *pb.Packet) {
+	log.Println("handling packet")
+	log.Printf(" %+v\n", msg)
 
- */
-func authClient(msg *pb.Packet) bool {
+	log.Println(" [debug] payload ->", msg.GetPayload())
+	// we'd have to change the manager a little bit
+	// because it could handle sending normal messages
+	// but also handle game logic?
+	switch msg.Payload.(type) {
+	case *pb.Packet_Chat:
+		log.Println("packet is a chat type")
+
+	case *pb.Packet_Game:
+		log.Println("packet is a game type")
+
+	case *pb.Packet_NewGame:
+		log.Println("packet is a new game type")
+
+	case *pb.Packet_Paint:
+		log.Println("packet is a paint game type")
+
+	default:
+		log.Println("should we honour this msg type?")
+	}
+}
+
+// checks if the packet the sender of the packet is in our database
+func authClient(id int32) bool {
+	log.Printf(" [debug] checking %d is  in db\n", id)
 	return true
-}
-
-// Converts extractedPacketData to a pb.Packet defined
-// according to spec
-func parsePacketData(data []byte) (*pb.Packet, error) {
-	msg := &pb.Packet{}
-	if err := proto.Unmarshal(data, msg); err != nil {
-		return nil, fmt.Errorf("could not parse data packet %w", err)
-	}
-	return msg, nil
 }
 
 // Reads from a connection until a full packet is is gotten
 func extractPacket(conn net.Conn) ([]byte, error) {
+	log.Println("extracting packet")
 	buff := make([]byte, headerLength)
-	for {
-		_, err := conn.Read(buff)
-		if err != nil {
-			return []byte{}, fmt.Errorf("couldn't read from conn: %w", err)
-		}
-
-		packetLength := binary.BigEndian.Uint32(buff)
-
-		packet := make([]byte, packetLength)
-		read, err := io.ReadFull(conn, packet)
-		if err != nil {
-			return []byte{}, fmt.Errorf("couldn't read full packet: %w", err)
-		}
-
-		if read != int(packetLength) {
-			slog.Warn(
-				"expected to read full packet length",
-				"expected", packetLength,
-				"read", read,
-			)
-
-			return packet, nil
-		}
-
+	n, err := io.ReadFull(conn, buff)
+	if err != nil {
+		return []byte{}, fmt.Errorf("couldn't read from conn: %w", err)
 	}
-}
 
-// Depending on how this will be fleshed out
-// I think we should leave this here instead
-// of assinging to the manager, to keep it lean
-// and not necessarily parse messages
-func handleMessage(msg *pb.Packet) {
+	log.Println(" [debug] header read -> ", n)
+	packetLength := binary.BigEndian.Uint32(buff)
+
+	log.Println(" [debug] packet length ->", packetLength)
+	packet := make([]byte, packetLength)
+	read, err := io.ReadFull(conn, packet)
+	if err != nil {
+		return []byte{}, fmt.Errorf("couldn't read full packet: %w", err)
+	}
+
+	if read != int(packetLength) {
+		slog.Warn(
+			"expected to read full packet length",
+			"expected", packetLength,
+			"read", read,
+		)
+	}
+	return packet, nil
 }

@@ -206,7 +206,7 @@ func (x *ChatMessage) GetContent() string {
 
 type User struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Username      string                 `protobuf:"bytes,1,opt,name=Username,proto3" json:"Username,omitempty"`
+	Username      string                 `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
 	Id            int32                  `protobuf:"varint,2,opt,name=Id,proto3" json:"Id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -256,9 +256,17 @@ func (x *User) GetId() int32 {
 	return 0
 }
 
+// we're using one-time id because when a client
+// connects for the firstime, they need to provide
+// basic creds like 'username', 'password' and
+// we can check against the database.
+// after that we assing them a UUID that will
+// be used to identify them through out their whole
+// lifetime
 type PaintMessage struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
-	ConnectedUsers []*User                `protobuf:"bytes,1,rep,name=ConnectedUsers,proto3" json:"ConnectedUsers,omitempty"`
+	OneTimeId      string                 `protobuf:"bytes,1,opt,name=one_time_id,json=oneTimeId,proto3" json:"one_time_id,omitempty"`
+	ConnectedUsers []*User                `protobuf:"bytes,2,rep,name=connected_users,json=connectedUsers,proto3" json:"connected_users,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -291,6 +299,13 @@ func (x *PaintMessage) ProtoReflect() protoreflect.Message {
 // Deprecated: Use PaintMessage.ProtoReflect.Descriptor instead.
 func (*PaintMessage) Descriptor() ([]byte, []int) {
 	return file_api_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *PaintMessage) GetOneTimeId() string {
+	if x != nil {
+		return x.OneTimeId
+	}
+	return ""
 }
 
 func (x *PaintMessage) GetConnectedUsers() []*User {
@@ -421,10 +436,11 @@ const file_api_proto_rawDesc = "" +
 	"\vChatMessage\x12\x18\n" +
 	"\aContent\x18\x01 \x01(\tR\aContent\"2\n" +
 	"\x04User\x12\x1a\n" +
-	"\bUsername\x18\x01 \x01(\tR\bUsername\x12\x0e\n" +
-	"\x02Id\x18\x02 \x01(\x05R\x02Id\"F\n" +
-	"\fPaintMessage\x126\n" +
-	"\x0eConnectedUsers\x18\x01 \x03(\v2\x0e.protocol.UserR\x0eConnectedUsers\"5\n" +
+	"\busername\x18\x01 \x01(\tR\busername\x12\x0e\n" +
+	"\x02Id\x18\x02 \x01(\x05R\x02Id\"g\n" +
+	"\fPaintMessage\x12\x1e\n" +
+	"\vone_time_id\x18\x01 \x01(\tR\toneTimeId\x127\n" +
+	"\x0fconnected_users\x18\x02 \x03(\v2\x0e.protocol.UserR\x0econnectedUsers\"5\n" +
 	"\vGameMessage\x12\x12\n" +
 	"\x04SSID\x18\x01 \x01(\tR\x04SSID\x12\x12\n" +
 	"\x04Play\x18\x02 \x01(\tR\x04Play\"8\n" +
@@ -460,7 +476,7 @@ var file_api_proto_depIdxs = []int32{
 	4, // 2: protocol.Packet.game:type_name -> protocol.GameMessage
 	5, // 3: protocol.Packet.newGame:type_name -> protocol.NewGameMessage
 	6, // 4: protocol.Packet.last_updated:type_name -> google.protobuf.Timestamp
-	2, // 5: protocol.PaintMessage.ConnectedUsers:type_name -> protocol.User
+	2, // 5: protocol.PaintMessage.connected_users:type_name -> protocol.User
 	6, // [6:6] is the sub-list for method output_type
 	6, // [6:6] is the sub-list for method input_type
 	6, // [6:6] is the sub-list for extension type_name

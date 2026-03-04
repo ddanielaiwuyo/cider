@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"log"
 	"github.com/persona-mp3/internal/server"
+	"log"
 )
 
 func main() {
@@ -13,7 +13,7 @@ func main() {
 
 	go manager.Listen(ctx)
 
-	if err := server.Start(manager); err != nil {
+	if err := server.RunServer(manager); err != nil {
 		log.Fatal(err)
 	}
 }

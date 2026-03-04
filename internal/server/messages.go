@@ -1,25 +1,25 @@
 package server
 
 import (
-	"fmt"
-	"strings"
+	"log"
+
+	"github.com/google/uuid"
+	pb "github.com/persona-mp3/protocols/github.com/persona-mp3/protocols"
 )
 
-func createPaintMessage() string {
-	var msg strings.Builder
-	msg.WriteString("Connected Users;")
-
-	for id := range connectedUsers {
-		fmt.Fprintf(&msg, "User %d;", id)
+func createPaintMessage() *pb.PaintMessage {
+	// should just get a list of all
+	// connected users, possibly provided from?
+	activeUsers := []*pb.User{
+		{Username: "gopls"},
+		{Username: "are_you_ladies_man_217?"},
+		{Username: "a_blow_fish!"},
 	}
 
-	return msg.String()
-}
-
-func createMalformedMessage(dest int) Message {
-	return Message{
-		Dest:    dest,
-		Content: ErrMalformedMessage.Error(),
-		From:    serverId,
+	paintMsg := pb.PaintMessage{
+		ConnectedUsers: activeUsers,
+		OneTimeId:      uuid.New().String(),
 	}
+	log.Println(" [debug] created id for user")
+	return &paintMsg
 }

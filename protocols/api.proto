@@ -19,11 +19,11 @@ message Packet {
 }
 
 message ChatMessage {
-  string Content = 1;
+  string content = 1;
 }
 
 message User {
-  string Username = 1;
+  string username = 1;
   int32 Id = 2;
 }
 
@@ -35,16 +35,16 @@ message User {
 // be used to identify them through out their whole 
 // lifetime
 message PaintMessage {
-  int32 OneTimeId = 1;
-  repeated User ConnectedUsers = 2;
+  string one_time_id = 1;
+  repeated User connected_users = 2;
 }
 
 message GameMessage {
-  string SSID = 1;
-  string Play = 2;
+  string ssid = 1;
+  string play = 2;
 }
 
 message NewGameMessage {
-  int32 From  = 1;
-  int32 Dest = 2;
+  int32 from  = 1;
+  int32 dest = 2;
 }
