@@ -45,8 +45,8 @@ func DialServer(port int) {
 func fromServer(ctx context.Context, conn net.Conn) <-chan *pb.Packet {
 	response := make(chan *pb.Packet)
 	go func() {
+		defer close(response)
 		for {
-			defer close(response)
 			select {
 			case <-ctx.Done():
 				slog.Info(" ctx called!")
