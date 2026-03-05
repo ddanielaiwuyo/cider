@@ -2,12 +2,30 @@ package main
 
 import (
 	"context"
-	"github.com/persona-mp3/internal/server"
+	"fmt"
 	"log"
+	"os"
+
+	db "github.com/persona-mp3/internal/database"
+	"github.com/persona-mp3/internal/server"
 )
 
 func main() {
-	manager := server.NewManager()
+	//  use ENV instead!
+	dbConf := &db.DBConfig{
+		Username: "persona",
+		Password: "persona-mp3",
+		Database: "users",
+		Port:     5432,
+	}
+
+	conn, err := db.Connect(dbConf)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		os.Exit(1)
+	}
+
+	manager := server.NewManager(conn)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 

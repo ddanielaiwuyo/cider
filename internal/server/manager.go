@@ -6,6 +6,8 @@ import (
 	"log"
 	"log/slog"
 	"math/rand"
+
+	"github.com/jackc/pgx/v5"
 )
 
 type GameSession struct {
@@ -19,9 +21,10 @@ type manager struct {
 	deliver       chan Message
 	sessions      map[int]*GameSession
 	serverDeliver chan Message
+	dbconn        *pgx.Conn
 }
 
-func NewManager() *manager {
+func NewManager(dbConn *pgx.Conn) *manager {
 	return &manager{
 		register:      make(chan client),
 		remove:        make(chan int),
@@ -168,4 +171,3 @@ func (mgr *manager) createGameSession(from int, dest int) int {
 	mgr.deliver <- msg
 	return sessionId
 }
-
