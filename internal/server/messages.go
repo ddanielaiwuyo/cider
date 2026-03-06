@@ -1,7 +1,7 @@
 package server
 
 import (
-	"log"
+	"slices"
 
 	pb "github.com/persona-mp3/protocols/gen"
 )
@@ -9,13 +9,13 @@ import (
 func createPaintMessage(mgr *manager, id connId) *pb.PaintMessage {
 	var connections = make([]*pb.User, len(mgr.connections))
 	for connId, c := range mgr.connections {
+
 		u := &pb.User{
 			Username: c.username,
 			Id:       string(connId),
 		}
 
 		connections = append(connections, u)
-		log.Printf("[debug] user-> %+v\n", c)
 	}
 
 	// incase they're the only user connected
@@ -25,6 +25,10 @@ func createPaintMessage(mgr *manager, id connId) *pb.PaintMessage {
 			Id:       string(id),
 		}
 		connections = append(connections, u)
+	} else {
+		connections = slices.DeleteFunc(connections, func(u *pb.User) bool {
+			return u == nil
+		})
 	}
 
 	paintMsg := pb.PaintMessage{
