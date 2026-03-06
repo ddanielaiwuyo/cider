@@ -52,7 +52,6 @@ const stub = connId("999")
 
 func handleConnection(mgr *manager, conn net.Conn) {
 	defer conn.Close()
-	// defer remover()
 	username, authStats := authenticateClient(mgr, conn)
 	if !authStats {
 		content, err := createAuthStatusWirePacket(stub, 400, "unidentified user")
@@ -128,7 +127,7 @@ func handleMessage(mgr *manager, msg *pb.Packet) {
 
 	case *pb.Packet_Game:
 		log.Println("packet is a game type")
-		HandleGame(msg)
+		HandleGamePacket(mgr, msg.GetGame())
 
 	case *pb.Packet_NewGame:
 		log.Println("packet is a new game type")

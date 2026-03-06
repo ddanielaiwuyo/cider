@@ -69,9 +69,8 @@ func newPlayer(c *Client) *Player {
 	}
 }
 
-// Not sure yet what to tell the client whent the provide
-// a non-existent ssid
-func handleGamePacket(mgr *manager, gamePacket *pb.GameMessage) {
+// Not sure yet, what to tell the client when they provide a non-existent ssid
+func HandleGamePacket(mgr *manager, gamePacket *pb.GameMessage) {
 	ssid := gamePacket.Ssid
 	session, validSession := mgr.GameSessions[ssid]
 	if !validSession {

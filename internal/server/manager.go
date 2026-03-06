@@ -68,7 +68,7 @@ func (m *manager) Listen(ctx context.Context) {
 			m.executeQuery(ctx, q)
 
 		case <-ctx.Done():
-			slog.Info("exiting manager:", "", ctx.Err().Error())
+			slog.Info("exiting manager", "reason", ctx.Err().Error())
 			return
 		}
 	}

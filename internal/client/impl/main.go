@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
-	// "os"
-	// "os/signal"
 	"strings"
 
 	pb "github.com/persona-mp3/protocols/gen"
@@ -140,32 +138,27 @@ var InGameState bool
 // ng  username* newGameMessage
 // username* -> normalMessage
 func parseStdinVal(input string) *pb.Packet {
-	if len(input) == 0 {
-		fmt.Println("Atrocious")
-		return nil
-	}
 	msgType, msg, found := strings.Cut(input, "*")
 	if !found {
-		fmt.Printf("can't parse message no recipient || %T %d\n", input, len(input))
+		fmt.Println("can't parse message no recipient")
 		return nil
 	}
 
 	_, recipient, found := strings.Cut(msgType, " ")
 	if !found || len(strings.ReplaceAll(recipient, " ", "")) == 0 {
-		fmt.Println(" [info] can't parse message no recipient")
+		fmt.Println("can't parse message no recipient")
 		return nil
 	}
 
 	switch {
 	case strings.Contains(msgType, NewGame):
-		fmt.Println(" [debug] new game type")
+		fmt.Println(" [debug] new game response")
 		packet, err := createNewGameMessage(recipient, msg)
 		if err != nil {
 			slog.Error("error", "reason", err)
 			return nil
 		}
 		return packet
-		// default:
 	}
 
 	fmt.Println(" [debug] normal chat msg")
