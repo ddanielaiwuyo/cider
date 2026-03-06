@@ -4,15 +4,13 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/jackc/pgx/v5"
+	pack "github.com/persona-mp3/internal/packet"
+	pb "github.com/persona-mp3/protocols/gen"
 	"io"
 	"log"
 	"log/slog"
 	"net"
-
-	// pb "github.com/persona-mp3/protocols/github.com/persona-mp3/protocols"
-	"github.com/jackc/pgx/v5"
-	pack "github.com/persona-mp3/internal/packet"
-	pb "github.com/persona-mp3/protocols/gen"
 )
 
 const (
@@ -45,16 +43,15 @@ func RunServer(mgr *manager) error {
 			continue
 		}
 
-		// write paint message here instead
 		go handleConnection(mgr, conn)
 
 	}
 }
 
-const headerLength = 4
+const headerSize = 4
 
 func authenticateClient(mgr *manager, conn net.Conn) bool {
-	content, err := pack.ReadWirePacket(conn, headerLength)
+	content, err := pack.ReadWirePacket(conn, headerSize)
 	if err != nil {
 		slog.Error("while trying to authenticate client", "", err)
 		return false
@@ -62,13 +59,13 @@ func authenticateClient(mgr *manager, conn net.Conn) bool {
 
 	packet, err := pack.ParseWirePacket(content)
 	if err != nil {
-		slog.Error("while trying to authenticate clieint", "", err)
+		slog.Error("while trying to authenticate client", "err", err)
 		return false
 	}
 
 	auth, ok := packet.Payload.(*pb.Packet_Auth)
 	if !ok {
-		slog.Info("client did not provid an auth packet upon first connection")
+		slog.Info("client did not provide an auth packet upon first connection")
 		return false
 	}
 	query := ` select * from users where username=$1 `
@@ -113,7 +110,7 @@ func handleConnection(mgr *manager, conn net.Conn) {
 		return
 	}
 
-	paintPacket, err := createPaintPacket(0)
+	paintPacket, err := createPaintPacket(stub)
 	if err != nil {
 		slog.Error("error", "err", err)
 	}
@@ -137,16 +134,10 @@ func handleConnection(mgr *manager, conn net.Conn) {
 		}
 
 		packet, err := pack.ParseWirePacket(content)
-		// packet, err := parsePacketData(content)
 		if err != nil {
 			slog.Error("protobuf error occured", "err", err)
 			return
 		}
-
-		// if !authClient(packet.) {
-		// 	slog.Info("client could not be authenticated")
-		// 	return
-		// }
 
 		handleMessage(mgr, packet)
 	}
@@ -178,15 +169,10 @@ func handleMessage(mgr *manager, msg *pb.Packet) {
 	}
 }
 
-// checks if the packet the sender of the packet is in our database
-func authClient(username string) bool {
-	return true
-}
-
 // Reads from a connection until a full packet is is gotten
+// It returns errors that include IO operations
 func extractPacket(conn net.Conn) ([]byte, error) {
-	log.Println("extracting packet")
-	buff := make([]byte, headerLength)
+	buff := make([]byte, headerSize)
 	_, err := io.ReadFull(conn, buff)
 	if err != nil {
 		return []byte{}, fmt.Errorf("couldn't read from conn: %w", err)
