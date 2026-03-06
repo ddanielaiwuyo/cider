@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	// "os"
+	// "os/signal"
 	"strings"
 
 	pb "github.com/persona-mp3/protocols/gen"
@@ -40,8 +42,11 @@ func DialServer(port int, creds AuthCredentials) {
 
 	packetCh := fromServer(ctx, conn)
 	stdin := fromStdin(ctx)
-	writer := toServer(ctx, conn)
+	// writer := toServer(ctx, conn)
+	// c := make(chan os.Signal, 1)
+	// signal.Notify(c)
 	for {
+		print("......")
 		select {
 		case packet := <-packetCh:
 			fmt.Println(" *notification")
@@ -49,13 +54,19 @@ func DialServer(port int, creds AuthCredentials) {
 		case val := <-stdin:
 			packet := parseStdinVal(val)
 			if packet == nil {
+				println("[debug]  packet is nil")
 				continue
 			}
 
-			writer <- packet
+			println("[debug]  writing to writer")
+			// writer <- packet
+			// println("[debug]  written to writer")
+
 		}
 	}
 }
+
+var connId string
 
 func handleResponse(p *pb.Packet) {
 	switch p.Payload.(type) {
@@ -72,16 +83,46 @@ func handleResponse(p *pb.Packet) {
 	}
 }
 
-func handlePaintMessage(p *pb.Packet) {
+type paintContent struct {
+	connId         string
+	connectedUsers map[string]string
+}
+
+var PaintCredentials *paintContent
+
+func handlePaintMessage(p *pb.Packet) *paintContent {
 	slog.Info("[debug] paint packet from server")
 	msg := p.GetPaint()
-	connectedUsers := msg.ConnectedUsers
+	activeUsers := msg.ConnectedUsers
 	fmt.Printf(" uuid: %2s\n", msg.OneTimeId)
 
 	fmt.Printf("  ACTIVE USERS\n")
-	for i, u := range connectedUsers {
+	users := make(map[string]string)
+	for i, u := range activeUsers {
 		fmt.Printf("%2d.  %2s\n", i+1, u.Username)
+		users[u.Username] = u.Id
 	}
+
+	paint := &paintContent{
+		connId:         msg.OneTimeId,
+		connectedUsers: users,
+	}
+
+	PaintCredentials = paint
+	return paint
+}
+
+func findUser(username string) (string, bool) {
+	userId, ok := PaintCredentials.connectedUsers[username]
+	if !ok {
+		return "", false
+	}
+
+	return userId, true
+}
+
+func getConnId() string {
+	return PaintCredentials.connId
 }
 
 var InGameState bool
@@ -89,9 +130,13 @@ var InGameState bool
 // ng  username* newGameMessage
 // username* -> normalMessage
 func parseStdinVal(input string) *pb.Packet {
+	if len(input) == 0 {
+		fmt.Println("Atrocious")
+		return nil
+	}
 	msgType, msg, found := strings.Cut(input, "*")
 	if !found {
-		fmt.Println("can't parse message no recipient")
+		fmt.Printf("can't parse message no recipient || %T %d\n", input, len(input))
 		return nil
 	}
 
@@ -110,22 +155,27 @@ func parseStdinVal(input string) *pb.Packet {
 			return nil
 		}
 		return packet
-	default:
-		fmt.Println(" [debug] normal chat msg")
+		// default:
 	}
 
+	fmt.Println(" [debug] normal chat msg")
 	return nil
 }
 
 func createNewGameMessage(recipient, message string) (*pb.Packet, error) {
+	to, found := findUser(recipient)
+	if !found {
+		return nil, fmt.Errorf("recipient %s could not be found", recipient)
+	}
 	slog.Info("[debug] creating new message packet", "to", recipient, "msg", message)
+	connID := getConnId()
 	p := &pb.Packet{
-		From: "this-clients-uuid-or-name",
-		Dest: recipient, // "this clients-uuid",
+		From: connID,
+		Dest: to,
 		Payload: &pb.Packet_NewGame{
 			NewGame: &pb.NewGameMessage{
-				From: "this-clients-uuid-or-name",
-				Dest: recipient, // "this clients-uuid",
+				From: connID,
+				Dest: to, // "this clients-uuid",
 			},
 		},
 	}

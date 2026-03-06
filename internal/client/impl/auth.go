@@ -11,8 +11,6 @@ import (
 	pack "github.com/persona-mp3/internal/packet"
 )
 
-// type connId string
-
 func authServer(conn net.Conn, creds AuthCredentials) bool {
 	// need a default stub as a random value
 	stub := uuid.NewSHA1(uuid.New(), []byte(creds.Username)).String()
