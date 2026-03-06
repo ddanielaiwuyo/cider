@@ -2,7 +2,7 @@ syntax = "proto3";
 package protocol;
 
 import "google/protobuf/timestamp.proto";
-option go_package = "github.com/persona-mp3/protocols";
+option go_package = "gen/";
 
 message Packet {
   int32 From = 1;
@@ -12,10 +12,12 @@ message Packet {
     PaintMessage paint = 3;
     ChatMessage chat = 4;
     GameMessage game = 5;
-    NewGameMessage newGame = 6;
+    NewGameMessage new_game = 6;
+    AuthMessage auth = 7;
+    AuthSuccess auth_success = 8;
   }
 
-  google.protobuf.Timestamp last_updated = 7;
+  google.protobuf.Timestamp last_updated = 9;
 }
 
 message ChatMessage {
@@ -47,4 +49,13 @@ message GameMessage {
 message NewGameMessage {
   int32 from  = 1;
   int32 dest = 2;
+}
+
+message AuthMessage {
+  string username = 1;
+}
+
+message AuthSuccess {
+  int32 code = 1;
+  string content = 2;
 }

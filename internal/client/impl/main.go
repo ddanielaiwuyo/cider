@@ -10,14 +10,19 @@ import (
 	"net"
 	"os"
 
-	pb "github.com/persona-mp3/protocols/github.com/persona-mp3/protocols"
+	pb "github.com/persona-mp3/protocols/gen"
 
-	"github.com/persona-mp3/internal/packet"
+	pack "github.com/persona-mp3/internal/packet"
 )
 
 const headerSize = 4
 
-func DialServer(port int) {
+// should read from configs or env instead
+type AuthCredentials struct {
+	Username string
+}
+
+func DialServer(port int, creds AuthCredentials) {
 	addr := fmt.Sprintf("localhost:%d", port)
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
@@ -28,6 +33,11 @@ func DialServer(port int) {
 	defer conn.Close()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	if !authServer(conn, creds) {
+		slog.Info("exiting application because server refused to authenticate", slog.Bool("auth", false))
+		return
+	}
 
 	packetCh := fromServer(ctx, conn)
 	stdin := fromStdin(ctx)
@@ -53,7 +63,7 @@ func fromServer(ctx context.Context, conn net.Conn) <-chan *pb.Packet {
 				return
 
 			default:
-				content, err := packet.ReadWirePacket(conn, headerSize)
+				content, err := pack.ReadWirePacket(conn, headerSize)
 				if err != nil {
 					if errors.Is(err, io.EOF) {
 						slog.Error("server has disconnected!", "err", err)
@@ -64,7 +74,7 @@ func fromServer(ctx context.Context, conn net.Conn) <-chan *pb.Packet {
 					}
 				}
 
-				packet, err := packet.ParseWirePacket(content)
+				packet, err := pack.ParseWirePacket(content)
 				if err != nil {
 					slog.Error("error in parsing wire packet", "err", err)
 					continue
@@ -104,17 +114,68 @@ func handleResponse(p *pb.Packet) {
 
 	case *pb.Packet_Game:
 		slog.Info("[debug] game packet from server")
-		fmt.Printf("  #%d:   | ssid: %2s | newplay: %2s ", p.From, p.GetGame().SSID, p.GetGame().GetPlay())
+		fmt.Printf("  #%d:   | ssid: %2s | newplay: %2s ", p.From, p.GetGame().Ssid, p.GetGame().GetPlay())
 
 	case *pb.Packet_Paint:
 		handlePaintMessage(p)
 	}
 }
 
+func authServer(conn net.Conn, creds AuthCredentials) bool {
+	p := &pb.Packet{
+		From: 99999, // need a default stub
+		Dest: 0,
+		Payload: &pb.Packet_Auth{
+			Auth: &pb.AuthMessage{
+				Username: creds.Username,
+			},
+		},
+	}
+
+	content, err := pack.MarshallPacket(p, headerSize)
+	if err != nil {
+		slog.Error("while preparing auth packet", "err", err)
+		return false
+	}
+
+	if _, err := conn.Write(content); err != nil {
+		slog.Error("while writing auth to server", "err", err)
+		return false
+	}
+
+	// wait for auth response
+	wirePacket, err := pack.ReadWirePacket(conn, headerSize)
+	if err != nil {
+		slog.Error("while waiting for auth response", "err", err)
+		return false
+	}
+
+	authPack, err := pack.ParseWirePacket(wirePacket)
+	if err != nil {
+		slog.Error("while parsing auth packet", "err", err)
+		return false
+	}
+
+	auth, authOk := authPack.Payload.(*pb.Packet_AuthSuccess)
+	if !authOk {
+		slog.Error("expected an auth packet but got", "", nil)
+		fmt.Printf("\n%+v\n", authPack)
+		return false
+	}
+
+	if auth.AuthSuccess.Code != 201 {
+		slog.Info("Server did not authenticate your credentials please try again",
+			slog.Int("code", int(auth.AuthSuccess.Code)),
+			slog.String("Content", auth.AuthSuccess.Content),
+		)
+	}
+	return true
+}
+
 // store clients credentials
 // this might be a security concern? but
 // it's on the clients pc
-type credentials struct {
+type gameCredentials struct {
 	ssid string
 	id   string
 }

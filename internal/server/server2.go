@@ -9,7 +9,10 @@ import (
 	"log/slog"
 	"net"
 
-	pb "github.com/persona-mp3/protocols/github.com/persona-mp3/protocols"
+	// pb "github.com/persona-mp3/protocols/github.com/persona-mp3/protocols"
+	"github.com/jackc/pgx/v5"
+	pack "github.com/persona-mp3/internal/packet"
+	pb "github.com/persona-mp3/protocols/gen"
 )
 
 const (
@@ -50,8 +53,66 @@ func RunServer(mgr *manager) error {
 
 const headerLength = 4
 
+func authenticateClient(mgr *manager, conn net.Conn) bool {
+	content, err := pack.ReadWirePacket(conn, headerLength)
+	if err != nil {
+		slog.Error("while trying to authenticate client", "", err)
+		return false
+	}
+
+	packet, err := pack.ParseWirePacket(content)
+	if err != nil {
+		slog.Error("while trying to authenticate clieint", "", err)
+		return false
+	}
+
+	auth, ok := packet.Payload.(*pb.Packet_Auth)
+	if !ok {
+		slog.Info("client did not provid an auth packet upon first connection")
+		return false
+	}
+	query := ` select * from users where username=$1 `
+	q := NewQuery(query, []any{auth.Auth.Username})
+	// we actually want this to be blocking because
+	// if we can't auth the client we shouldn't continue
+	mgr.query <- q
+	result := <-q.result
+
+	var id int
+	var username string
+	var email string
+
+	if err := result.Scan(&id, &username, &email); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			slog.Info("database could not find entry for user", slog.String("", auth.Auth.Username))
+			return false
+		}
+		slog.Error("unexpected error", "err", err)
+		return false
+	}
+
+	return true
+}
+
+const stub = 9999
+
 func handleConnection(mgr *manager, conn net.Conn) {
 	defer conn.Close()
+	if !authenticateClient(mgr, conn) {
+		return
+	}
+	slog.Info("authenticated client successfully!", slog.String("", ""))
+	content, err := createAuthSuccessWirePacket(stub, 201, "")
+	if err != nil {
+		slog.Error("while creating auth success packet", "err", err)
+		return
+	}
+
+	if _, err := conn.Write(content); err != nil {
+		slog.Error("while sending auth packet", "err", err)
+		return
+	}
+
 	paintPacket, err := createPaintPacket(0)
 	if err != nil {
 		slog.Error("error", "err", err)
@@ -75,16 +136,17 @@ func handleConnection(mgr *manager, conn net.Conn) {
 			}
 		}
 
-		packet, err := parsePacketData(content)
+		packet, err := pack.ParseWirePacket(content)
+		// packet, err := parsePacketData(content)
 		if err != nil {
 			slog.Error("protobuf error occured", "err", err)
 			return
 		}
 
-		if !authClient(packet.From) {
-			slog.Info("client could not be authenticated")
-			return
-		}
+		// if !authClient(packet.) {
+		// 	slog.Info("client could not be authenticated")
+		// 	return
+		// }
 
 		handleMessage(mgr, packet)
 	}
@@ -117,7 +179,7 @@ func handleMessage(mgr *manager, msg *pb.Packet) {
 }
 
 // checks if the packet the sender of the packet is in our database
-func authClient(id int32) bool {
+func authClient(username string) bool {
 	return true
 }
 

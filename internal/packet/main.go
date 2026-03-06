@@ -7,7 +7,8 @@ import (
 	"log"
 	"log/slog"
 	"fmt"
-	pb "github.com/persona-mp3/protocols/github.com/persona-mp3/protocols"
+	// pb "github.com/persona-mp3/protocols/github.com/persona-mp3/protocols"
+	pb "github.com/persona-mp3/protocols/gen"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -32,6 +33,7 @@ func ParseWirePacket(data []byte) (*pb.Packet, error) {
 	return msg, nil
 }
 
+// The errors returned are all io errors on the socket
 func ReadWirePacket(conn net.Conn, headerLength int) ([]byte, error) {
 	log.Println("[debug] extracting packet")
 	buff := make([]byte, headerLength)

@@ -15,7 +15,7 @@ func main() {
 	dbConf := &db.DBConfig{
 		Username: "persona",
 		Password: "persona-mp3",
-		Database: "users",
+		Database: "cidervine",
 		Port:     5432,
 	}
 

@@ -4,7 +4,7 @@
 // 	protoc        v7.34.0
 // source: api.proto
 
-package protocols
+package gen
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -32,8 +32,10 @@ type Packet struct {
 	//	*Packet_Chat
 	//	*Packet_Game
 	//	*Packet_NewGame
+	//	*Packet_Auth
+	//	*Packet_AuthSuccess
 	Payload       isPacket_Payload       `protobuf_oneof:"Payload"`
-	LastUpdated   *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=last_updated,json=lastUpdated,proto3" json:"last_updated,omitempty"`
+	LastUpdated   *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=last_updated,json=lastUpdated,proto3" json:"last_updated,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -125,6 +127,24 @@ func (x *Packet) GetNewGame() *NewGameMessage {
 	return nil
 }
 
+func (x *Packet) GetAuth() *AuthMessage {
+	if x != nil {
+		if x, ok := x.Payload.(*Packet_Auth); ok {
+			return x.Auth
+		}
+	}
+	return nil
+}
+
+func (x *Packet) GetAuthSuccess() *AuthSuccess {
+	if x != nil {
+		if x, ok := x.Payload.(*Packet_AuthSuccess); ok {
+			return x.AuthSuccess
+		}
+	}
+	return nil
+}
+
 func (x *Packet) GetLastUpdated() *timestamppb.Timestamp {
 	if x != nil {
 		return x.LastUpdated
@@ -149,7 +169,15 @@ type Packet_Game struct {
 }
 
 type Packet_NewGame struct {
-	NewGame *NewGameMessage `protobuf:"bytes,6,opt,name=newGame,proto3,oneof"`
+	NewGame *NewGameMessage `protobuf:"bytes,6,opt,name=new_game,json=newGame,proto3,oneof"`
+}
+
+type Packet_Auth struct {
+	Auth *AuthMessage `protobuf:"bytes,7,opt,name=auth,proto3,oneof"`
+}
+
+type Packet_AuthSuccess struct {
+	AuthSuccess *AuthSuccess `protobuf:"bytes,8,opt,name=auth_success,json=authSuccess,proto3,oneof"`
 }
 
 func (*Packet_Paint) isPacket_Payload() {}
@@ -160,9 +188,13 @@ func (*Packet_Game) isPacket_Payload() {}
 
 func (*Packet_NewGame) isPacket_Payload() {}
 
+func (*Packet_Auth) isPacket_Payload() {}
+
+func (*Packet_AuthSuccess) isPacket_Payload() {}
+
 type ChatMessage struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Content       string                 `protobuf:"bytes,1,opt,name=Content,proto3" json:"Content,omitempty"`
+	Content       string                 `protobuf:"bytes,1,opt,name=content,proto3" json:"content,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -317,8 +349,8 @@ func (x *PaintMessage) GetConnectedUsers() []*User {
 
 type GameMessage struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	SSID          string                 `protobuf:"bytes,1,opt,name=SSID,proto3" json:"SSID,omitempty"`
-	Play          string                 `protobuf:"bytes,2,opt,name=Play,proto3" json:"Play,omitempty"`
+	Ssid          string                 `protobuf:"bytes,1,opt,name=ssid,proto3" json:"ssid,omitempty"`
+	Play          string                 `protobuf:"bytes,2,opt,name=play,proto3" json:"play,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -353,9 +385,9 @@ func (*GameMessage) Descriptor() ([]byte, []int) {
 	return file_api_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *GameMessage) GetSSID() string {
+func (x *GameMessage) GetSsid() string {
 	if x != nil {
-		return x.SSID
+		return x.Ssid
 	}
 	return ""
 }
@@ -369,8 +401,8 @@ func (x *GameMessage) GetPlay() string {
 
 type NewGameMessage struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	From          int32                  `protobuf:"varint,1,opt,name=From,proto3" json:"From,omitempty"`
-	Dest          int32                  `protobuf:"varint,2,opt,name=Dest,proto3" json:"Dest,omitempty"`
+	From          int32                  `protobuf:"varint,1,opt,name=from,proto3" json:"from,omitempty"`
+	Dest          int32                  `protobuf:"varint,2,opt,name=dest,proto3" json:"dest,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -419,22 +451,120 @@ func (x *NewGameMessage) GetDest() int32 {
 	return 0
 }
 
+type AuthMessage struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Username      string                 `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AuthMessage) Reset() {
+	*x = AuthMessage{}
+	mi := &file_api_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuthMessage) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuthMessage) ProtoMessage() {}
+
+func (x *AuthMessage) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuthMessage.ProtoReflect.Descriptor instead.
+func (*AuthMessage) Descriptor() ([]byte, []int) {
+	return file_api_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *AuthMessage) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+type AuthSuccess struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Code          int32                  `protobuf:"varint,1,opt,name=code,proto3" json:"code,omitempty"`
+	Content       string                 `protobuf:"bytes,2,opt,name=content,proto3" json:"content,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AuthSuccess) Reset() {
+	*x = AuthSuccess{}
+	mi := &file_api_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuthSuccess) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuthSuccess) ProtoMessage() {}
+
+func (x *AuthSuccess) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuthSuccess.ProtoReflect.Descriptor instead.
+func (*AuthSuccess) Descriptor() ([]byte, []int) {
+	return file_api_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *AuthSuccess) GetCode() int32 {
+	if x != nil {
+		return x.Code
+	}
+	return 0
+}
+
+func (x *AuthSuccess) GetContent() string {
+	if x != nil {
+		return x.Content
+	}
+	return ""
+}
+
 var File_api_proto protoreflect.FileDescriptor
 
 const file_api_proto_rawDesc = "" +
 	"\n" +
-	"\tapi.proto\x12\bprotocol\x1a\x1fgoogle/protobuf/timestamp.proto\"\xba\x02\n" +
+	"\tapi.proto\x12\bprotocol\x1a\x1fgoogle/protobuf/timestamp.proto\"\xa4\x03\n" +
 	"\x06Packet\x12\x12\n" +
 	"\x04From\x18\x01 \x01(\x05R\x04From\x12\x12\n" +
 	"\x04Dest\x18\x02 \x01(\x05R\x04Dest\x12.\n" +
 	"\x05paint\x18\x03 \x01(\v2\x16.protocol.PaintMessageH\x00R\x05paint\x12+\n" +
 	"\x04chat\x18\x04 \x01(\v2\x15.protocol.ChatMessageH\x00R\x04chat\x12+\n" +
-	"\x04game\x18\x05 \x01(\v2\x15.protocol.GameMessageH\x00R\x04game\x124\n" +
-	"\anewGame\x18\x06 \x01(\v2\x18.protocol.NewGameMessageH\x00R\anewGame\x12=\n" +
-	"\flast_updated\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\vlastUpdatedB\t\n" +
+	"\x04game\x18\x05 \x01(\v2\x15.protocol.GameMessageH\x00R\x04game\x125\n" +
+	"\bnew_game\x18\x06 \x01(\v2\x18.protocol.NewGameMessageH\x00R\anewGame\x12+\n" +
+	"\x04auth\x18\a \x01(\v2\x15.protocol.AuthMessageH\x00R\x04auth\x12:\n" +
+	"\fauth_success\x18\b \x01(\v2\x15.protocol.AuthSuccessH\x00R\vauthSuccess\x12=\n" +
+	"\flast_updated\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\vlastUpdatedB\t\n" +
 	"\aPayload\"'\n" +
 	"\vChatMessage\x12\x18\n" +
-	"\aContent\x18\x01 \x01(\tR\aContent\"2\n" +
+	"\acontent\x18\x01 \x01(\tR\acontent\"2\n" +
 	"\x04User\x12\x1a\n" +
 	"\busername\x18\x01 \x01(\tR\busername\x12\x0e\n" +
 	"\x02Id\x18\x02 \x01(\x05R\x02Id\"g\n" +
@@ -442,11 +572,16 @@ const file_api_proto_rawDesc = "" +
 	"\vone_time_id\x18\x01 \x01(\tR\toneTimeId\x127\n" +
 	"\x0fconnected_users\x18\x02 \x03(\v2\x0e.protocol.UserR\x0econnectedUsers\"5\n" +
 	"\vGameMessage\x12\x12\n" +
-	"\x04SSID\x18\x01 \x01(\tR\x04SSID\x12\x12\n" +
-	"\x04Play\x18\x02 \x01(\tR\x04Play\"8\n" +
+	"\x04ssid\x18\x01 \x01(\tR\x04ssid\x12\x12\n" +
+	"\x04play\x18\x02 \x01(\tR\x04play\"8\n" +
 	"\x0eNewGameMessage\x12\x12\n" +
-	"\x04From\x18\x01 \x01(\x05R\x04From\x12\x12\n" +
-	"\x04Dest\x18\x02 \x01(\x05R\x04DestB\"Z github.com/persona-mp3/protocolsb\x06proto3"
+	"\x04from\x18\x01 \x01(\x05R\x04from\x12\x12\n" +
+	"\x04dest\x18\x02 \x01(\x05R\x04dest\")\n" +
+	"\vAuthMessage\x12\x1a\n" +
+	"\busername\x18\x01 \x01(\tR\busername\";\n" +
+	"\vAuthSuccess\x12\x12\n" +
+	"\x04code\x18\x01 \x01(\x05R\x04code\x12\x18\n" +
+	"\acontent\x18\x02 \x01(\tR\acontentB\x06Z\x04gen/b\x06proto3"
 
 var (
 	file_api_proto_rawDescOnce sync.Once
@@ -460,7 +595,7 @@ func file_api_proto_rawDescGZIP() []byte {
 	return file_api_proto_rawDescData
 }
 
-var file_api_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_api_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_api_proto_goTypes = []any{
 	(*Packet)(nil),                // 0: protocol.Packet
 	(*ChatMessage)(nil),           // 1: protocol.ChatMessage
@@ -468,20 +603,24 @@ var file_api_proto_goTypes = []any{
 	(*PaintMessage)(nil),          // 3: protocol.PaintMessage
 	(*GameMessage)(nil),           // 4: protocol.GameMessage
 	(*NewGameMessage)(nil),        // 5: protocol.NewGameMessage
-	(*timestamppb.Timestamp)(nil), // 6: google.protobuf.Timestamp
+	(*AuthMessage)(nil),           // 6: protocol.AuthMessage
+	(*AuthSuccess)(nil),           // 7: protocol.AuthSuccess
+	(*timestamppb.Timestamp)(nil), // 8: google.protobuf.Timestamp
 }
 var file_api_proto_depIdxs = []int32{
 	3, // 0: protocol.Packet.paint:type_name -> protocol.PaintMessage
 	1, // 1: protocol.Packet.chat:type_name -> protocol.ChatMessage
 	4, // 2: protocol.Packet.game:type_name -> protocol.GameMessage
-	5, // 3: protocol.Packet.newGame:type_name -> protocol.NewGameMessage
-	6, // 4: protocol.Packet.last_updated:type_name -> google.protobuf.Timestamp
-	2, // 5: protocol.PaintMessage.connected_users:type_name -> protocol.User
-	6, // [6:6] is the sub-list for method output_type
-	6, // [6:6] is the sub-list for method input_type
-	6, // [6:6] is the sub-list for extension type_name
-	6, // [6:6] is the sub-list for extension extendee
-	0, // [0:6] is the sub-list for field type_name
+	5, // 3: protocol.Packet.new_game:type_name -> protocol.NewGameMessage
+	6, // 4: protocol.Packet.auth:type_name -> protocol.AuthMessage
+	7, // 5: protocol.Packet.auth_success:type_name -> protocol.AuthSuccess
+	8, // 6: protocol.Packet.last_updated:type_name -> google.protobuf.Timestamp
+	2, // 7: protocol.PaintMessage.connected_users:type_name -> protocol.User
+	8, // [8:8] is the sub-list for method output_type
+	8, // [8:8] is the sub-list for method input_type
+	8, // [8:8] is the sub-list for extension type_name
+	8, // [8:8] is the sub-list for extension extendee
+	0, // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_api_proto_init() }
@@ -494,6 +633,8 @@ func file_api_proto_init() {
 		(*Packet_Chat)(nil),
 		(*Packet_Game)(nil),
 		(*Packet_NewGame)(nil),
+		(*Packet_Auth)(nil),
+		(*Packet_AuthSuccess)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -501,7 +642,7 @@ func file_api_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_proto_rawDesc), len(file_api_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

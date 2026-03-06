@@ -46,3 +46,17 @@ know when to switch btwn normal message or game message
 
 TODO-LATER:
 - Client should append their ssid for every GameMessage they send
+
+
+Now that we've switched to Protobufs, we need 
+to determine a way to just IDENTIFY users now!!
+
+Or wait, we can just auth them with an Auth Packet
+Packet {
+	int32 from;
+	int32 to;
+	Auth: {
+		string username;
+		...some other credentials
+	}
+}

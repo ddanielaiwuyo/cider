@@ -22,15 +22,17 @@ type manager struct {
 	sessions      map[int]*GameSession
 	serverDeliver chan Message
 	dbconn        *pgx.Conn
+	query         chan Query
 }
 
 func NewManager(dbConn *pgx.Conn) *manager {
 	return &manager{
-		register:      make(chan client),
-		remove:        make(chan int),
-		deliver:       make(chan Message, 10),
-		sessions:      make(map[int]*GameSession),
-		serverDeliver: make(chan Message, 10),
+		register: make(chan client),
+		remove:   make(chan int),
+		deliver:  make(chan Message, 10),
+		sessions: make(map[int]*GameSession),
+		query:    make(chan Query),
+		dbconn:   dbConn,
 	}
 }
 
@@ -70,12 +72,34 @@ func (m *manager) Listen(ctx context.Context) {
 			default:
 				log.Println("unsupported message perhaps?", msg)
 			}
+
+		case q := <-m.query:
+			// returns result to caller via channel
+			m.executeQuery(ctx, q)
+
 		case <-ctx.Done():
 			slog.Info("exiting manager:", "", ctx.Err().Error())
 			return
 		}
 	}
 }
+
+// TODO we cant determine the kind of query to
+// parse the struct into, is it better we return
+// the rows to scan for the caller?
+func (mgr *manager) executeQuery(ctx context.Context, q Query) {
+	// yea GO had to fight me w this? why doesnt string
+	// satisfy any??
+
+	// args := make([]any, len(q.params))
+	// for i, v := range q.params {
+	// 	args[i] = v
+	// }
+	// pgxConn.QueryRow(ctx, query, args...)
+	rows := mgr.dbconn.QueryRow(ctx, q.query, q.params...)
+	q.result <- rows
+}
+
 func (mgr *manager) startGame(ctx context.Context, ssid int, play chan Message) {
 	log.Println(" [debug] starting game")
 	session, ok := mgr.sessions[ssid]
