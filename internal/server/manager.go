@@ -11,35 +11,36 @@ import (
 	pb "github.com/persona-mp3/protocols/gen"
 )
 
-type client struct {
+type Client struct {
 	userId connId
+	username   string
 	conn   net.Conn
 }
 
-type GameSession struct {
-	id      int
-	players [2]client
-}
+// type GameSession struct {
+// 	id      int
+// 	players [2]client
+// }
 
 type manager struct {
-	connections map[connId]net.Conn
-	register    chan client
+	connections map[connId]Client
+	register    chan Client
 	remove      chan connId
 	deliver     chan *pb.Packet
-	sessions    map[int]*GameSession
-	dbconn      *pgx.Conn
-	query       chan Query
+	// sessions    map[int]*GameSession
+	dbconn *pgx.Conn
+	query  chan Query
 }
 
 func NewManager(dbConn *pgx.Conn) *manager {
 	return &manager{
-		connections: make(map[connId]net.Conn),
-		register:    make(chan client),
+		connections: make(map[connId]Client),
+		register:    make(chan Client),
 		remove:      make(chan connId),
 		deliver:     make(chan *pb.Packet, 10),
-		sessions:    make(map[int]*GameSession),
-		query:       make(chan Query),
-		dbconn:      dbConn,
+		// sessions:    make(map[int]*GameSession),
+		query:  make(chan Query),
+		dbconn: dbConn,
 	}
 }
 
@@ -52,7 +53,7 @@ func (m *manager) Listen(ctx context.Context) {
 		select {
 		case client := <-m.register:
 			slog.Info("registering", "client", client.userId)
-			m.connections[client.userId] = client.conn
+			m.connections[client.userId] = client
 
 		case id := <-m.remove:
 			slog.Info("removing client", "id", id)
@@ -104,16 +105,16 @@ func (mgr *manager) executeQuery(ctx context.Context, q Query) {
 
 // DEPRECATED
 func (mgr *manager) startGame(ctx context.Context, ssid int, play chan any) {
-	log.Println(" [debug] starting game")
-	session, ok := mgr.sessions[ssid]
-	if !ok {
-		slog.Info(" [start_game] could not find ssid for game", "id", ssid)
-		return
-	}
-
-	log.Println(" [debug] sending welcome msg")
-	_ = session
-
+	// log.Println(" [debug] starting game")
+	// session, ok := mgr.sessions[ssid]
+	// if !ok {
+	// 	slog.Info(" [start_game] could not find ssid for game", "id", ssid)
+	// 	return
+	// }
+	//
+	// log.Println(" [debug] sending welcome msg")
+	// _ = session
+	//
 	// welcomeMsg := `
 	// The game is about to be start...
 	// Buckle up brochachos

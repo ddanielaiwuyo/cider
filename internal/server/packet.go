@@ -10,8 +10,8 @@ import (
 	"net"
 )
 
-func createPaintPacket(stubDest connId, id connId) ([]byte, error) {
-	msg := createPaintMessage(id)
+func createPaintPacket(mgr *manager, stubDest connId, id connId) ([]byte, error) {
+	msg := createPaintMessage(mgr, id)
 	packet := pb.Packet{
 		From: string(id),
 		Dest: string(stubDest),

@@ -24,7 +24,6 @@ var (
 	ErrInternalServerError = errors.New("Internal server error, please wait")
 )
 
-type userId int
 type connId string
 
 func RunServer(mgr *manager) error {
@@ -54,7 +53,8 @@ const stub = connId("999")
 func handleConnection(mgr *manager, conn net.Conn) {
 	defer conn.Close()
 	// defer remover()
-	if !authenticateClient(mgr, conn) {
+	username, authStats := authenticateClient(mgr, conn)
+	if !authStats {
 		content, err := createAuthStatusWirePacket(stub, 400, "unidentified user")
 		if err != nil {
 			slog.Error("while creating auth success packet", "err", err)
@@ -80,13 +80,12 @@ func handleConnection(mgr *manager, conn net.Conn) {
 	}
 
 	userId := newConnId()
-	mgr.register <- client{userId, conn}
+	mgr.register <- Client{userId, username, conn}
 
-	paintPacket, err := createPaintPacket(stub, userId)
+	paintPacket, err := createPaintPacket(mgr, stub, userId)
 	if err != nil {
 		slog.Error("error", "err", err)
 		mgr.remove <- userId
-		// remover(userId)
 		return
 	} else {
 		_, err := conn.Write(paintPacket)
