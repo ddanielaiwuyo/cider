@@ -120,22 +120,19 @@ func handleConnection(mgr *manager, conn net.Conn) {
 }
 
 func handleMessage(mgr *manager, msg *pb.Packet) {
-	// log.Println("handling packet")
-	// log.Printf(" %+v\n", msg)
 	slog.Info("handling packet", slog.String("packet", fmt.Sprintf("%+v", msg)))
 
-	// we'd have to change the manager a little bit
-	// because it could handle sending normal messages
-	// but also handle game logic?
 	switch msg.Payload.(type) {
 	case *pb.Packet_Chat:
 		log.Println("packet is a chat type")
 
 	case *pb.Packet_Game:
 		log.Println("packet is a game type")
+		HandleGame(msg)
 
 	case *pb.Packet_NewGame:
 		log.Println("packet is a new game type")
+		CreateGameNewGameSession(mgr, msg.GetNewGame())
 
 	case *pb.Packet_Paint:
 		log.Println("packet is a paint game type")

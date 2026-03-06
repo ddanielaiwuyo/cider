@@ -83,6 +83,13 @@ func handleResponse(p *pb.Packet) {
 
 	case *pb.Packet_Paint:
 		handlePaintMessage(p)
+
+	case *pb.Packet_NewGameRes:
+		payload := p.GetNewGameRes()
+		slog.Info("[debug] new game response from server")
+		fmt.Printf(`
+		From: %2s  | GameSessionId: %2s  | Info: %2s \n
+		`, payload.From, payload.Ssid, *payload.Info)
 	}
 }
 

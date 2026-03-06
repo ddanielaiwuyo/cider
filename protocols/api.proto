@@ -15,9 +15,10 @@ message Packet {
     NewGameMessage new_game = 6;
     AuthMessage auth = 7;
     AuthSuccess auth_success = 8;
+    NewGameResponse new_game_res = 9;
   }
 
-  google.protobuf.Timestamp last_updated = 9;
+  google.protobuf.Timestamp last_updated = 10;
 }
 
 message ChatMessage {
@@ -47,8 +48,14 @@ message GameMessage {
 }
 
 message NewGameMessage {
-  string from  = 1;
+  string from = 1;
   string dest = 2;
+}
+message NewGameResponse {
+  string ssid = 1;
+  string from = 2;
+  bool created = 3;
+  optional string info =  4;
 }
 
 message AuthMessage {

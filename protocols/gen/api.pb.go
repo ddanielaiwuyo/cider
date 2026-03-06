@@ -34,8 +34,9 @@ type Packet struct {
 	//	*Packet_NewGame
 	//	*Packet_Auth
 	//	*Packet_AuthSuccess
+	//	*Packet_NewGameRes
 	Payload       isPacket_Payload       `protobuf_oneof:"payload"`
-	LastUpdated   *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=last_updated,json=lastUpdated,proto3" json:"last_updated,omitempty"`
+	LastUpdated   *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=last_updated,json=lastUpdated,proto3" json:"last_updated,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -145,6 +146,15 @@ func (x *Packet) GetAuthSuccess() *AuthSuccess {
 	return nil
 }
 
+func (x *Packet) GetNewGameRes() *NewGameResponse {
+	if x != nil {
+		if x, ok := x.Payload.(*Packet_NewGameRes); ok {
+			return x.NewGameRes
+		}
+	}
+	return nil
+}
+
 func (x *Packet) GetLastUpdated() *timestamppb.Timestamp {
 	if x != nil {
 		return x.LastUpdated
@@ -180,6 +190,10 @@ type Packet_AuthSuccess struct {
 	AuthSuccess *AuthSuccess `protobuf:"bytes,8,opt,name=auth_success,json=authSuccess,proto3,oneof"`
 }
 
+type Packet_NewGameRes struct {
+	NewGameRes *NewGameResponse `protobuf:"bytes,9,opt,name=new_game_res,json=newGameRes,proto3,oneof"`
+}
+
 func (*Packet_Paint) isPacket_Payload() {}
 
 func (*Packet_Chat) isPacket_Payload() {}
@@ -191,6 +205,8 @@ func (*Packet_NewGame) isPacket_Payload() {}
 func (*Packet_Auth) isPacket_Payload() {}
 
 func (*Packet_AuthSuccess) isPacket_Payload() {}
+
+func (*Packet_NewGameRes) isPacket_Payload() {}
 
 type ChatMessage struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -451,6 +467,74 @@ func (x *NewGameMessage) GetDest() string {
 	return ""
 }
 
+type NewGameResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Ssid          string                 `protobuf:"bytes,1,opt,name=ssid,proto3" json:"ssid,omitempty"`
+	From          string                 `protobuf:"bytes,2,opt,name=from,proto3" json:"from,omitempty"`
+	Created       bool                   `protobuf:"varint,3,opt,name=created,proto3" json:"created,omitempty"`
+	Info          *string                `protobuf:"bytes,4,opt,name=info,proto3,oneof" json:"info,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *NewGameResponse) Reset() {
+	*x = NewGameResponse{}
+	mi := &file_api_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NewGameResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NewGameResponse) ProtoMessage() {}
+
+func (x *NewGameResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NewGameResponse.ProtoReflect.Descriptor instead.
+func (*NewGameResponse) Descriptor() ([]byte, []int) {
+	return file_api_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *NewGameResponse) GetSsid() string {
+	if x != nil {
+		return x.Ssid
+	}
+	return ""
+}
+
+func (x *NewGameResponse) GetFrom() string {
+	if x != nil {
+		return x.From
+	}
+	return ""
+}
+
+func (x *NewGameResponse) GetCreated() bool {
+	if x != nil {
+		return x.Created
+	}
+	return false
+}
+
+func (x *NewGameResponse) GetInfo() string {
+	if x != nil && x.Info != nil {
+		return *x.Info
+	}
+	return ""
+}
+
 type AuthMessage struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Username      string                 `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
@@ -460,7 +544,7 @@ type AuthMessage struct {
 
 func (x *AuthMessage) Reset() {
 	*x = AuthMessage{}
-	mi := &file_api_proto_msgTypes[6]
+	mi := &file_api_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -472,7 +556,7 @@ func (x *AuthMessage) String() string {
 func (*AuthMessage) ProtoMessage() {}
 
 func (x *AuthMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_msgTypes[6]
+	mi := &file_api_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -485,7 +569,7 @@ func (x *AuthMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AuthMessage.ProtoReflect.Descriptor instead.
 func (*AuthMessage) Descriptor() ([]byte, []int) {
-	return file_api_proto_rawDescGZIP(), []int{6}
+	return file_api_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *AuthMessage) GetUsername() string {
@@ -505,7 +589,7 @@ type AuthSuccess struct {
 
 func (x *AuthSuccess) Reset() {
 	*x = AuthSuccess{}
-	mi := &file_api_proto_msgTypes[7]
+	mi := &file_api_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -517,7 +601,7 @@ func (x *AuthSuccess) String() string {
 func (*AuthSuccess) ProtoMessage() {}
 
 func (x *AuthSuccess) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_msgTypes[7]
+	mi := &file_api_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -530,7 +614,7 @@ func (x *AuthSuccess) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AuthSuccess.ProtoReflect.Descriptor instead.
 func (*AuthSuccess) Descriptor() ([]byte, []int) {
-	return file_api_proto_rawDescGZIP(), []int{7}
+	return file_api_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *AuthSuccess) GetCode() int32 {
@@ -551,7 +635,7 @@ var File_api_proto protoreflect.FileDescriptor
 
 const file_api_proto_rawDesc = "" +
 	"\n" +
-	"\tapi.proto\x12\bprotocol\x1a\x1fgoogle/protobuf/timestamp.proto\"\xa4\x03\n" +
+	"\tapi.proto\x12\bprotocol\x1a\x1fgoogle/protobuf/timestamp.proto\"\xe3\x03\n" +
 	"\x06Packet\x12\x12\n" +
 	"\x04from\x18\x01 \x01(\tR\x04from\x12\x12\n" +
 	"\x04dest\x18\x02 \x01(\tR\x04dest\x12.\n" +
@@ -561,7 +645,10 @@ const file_api_proto_rawDesc = "" +
 	"\bnew_game\x18\x06 \x01(\v2\x18.protocol.NewGameMessageH\x00R\anewGame\x12+\n" +
 	"\x04auth\x18\a \x01(\v2\x15.protocol.AuthMessageH\x00R\x04auth\x12:\n" +
 	"\fauth_success\x18\b \x01(\v2\x15.protocol.AuthSuccessH\x00R\vauthSuccess\x12=\n" +
-	"\flast_updated\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\vlastUpdatedB\t\n" +
+	"\fnew_game_res\x18\t \x01(\v2\x19.protocol.NewGameResponseH\x00R\n" +
+	"newGameRes\x12=\n" +
+	"\flast_updated\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\vlastUpdatedB\t\n" +
 	"\apayload\"'\n" +
 	"\vChatMessage\x12\x18\n" +
 	"\acontent\x18\x01 \x01(\tR\acontent\"2\n" +
@@ -576,7 +663,13 @@ const file_api_proto_rawDesc = "" +
 	"\x04play\x18\x02 \x01(\tR\x04play\"8\n" +
 	"\x0eNewGameMessage\x12\x12\n" +
 	"\x04from\x18\x01 \x01(\tR\x04from\x12\x12\n" +
-	"\x04dest\x18\x02 \x01(\tR\x04dest\")\n" +
+	"\x04dest\x18\x02 \x01(\tR\x04dest\"u\n" +
+	"\x0fNewGameResponse\x12\x12\n" +
+	"\x04ssid\x18\x01 \x01(\tR\x04ssid\x12\x12\n" +
+	"\x04from\x18\x02 \x01(\tR\x04from\x12\x18\n" +
+	"\acreated\x18\x03 \x01(\bR\acreated\x12\x17\n" +
+	"\x04info\x18\x04 \x01(\tH\x00R\x04info\x88\x01\x01B\a\n" +
+	"\x05_info\")\n" +
 	"\vAuthMessage\x12\x1a\n" +
 	"\busername\x18\x01 \x01(\tR\busername\";\n" +
 	"\vAuthSuccess\x12\x12\n" +
@@ -595,7 +688,7 @@ func file_api_proto_rawDescGZIP() []byte {
 	return file_api_proto_rawDescData
 }
 
-var file_api_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_api_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_api_proto_goTypes = []any{
 	(*Packet)(nil),                // 0: protocol.Packet
 	(*ChatMessage)(nil),           // 1: protocol.ChatMessage
@@ -603,24 +696,26 @@ var file_api_proto_goTypes = []any{
 	(*PaintMessage)(nil),          // 3: protocol.PaintMessage
 	(*GameMessage)(nil),           // 4: protocol.GameMessage
 	(*NewGameMessage)(nil),        // 5: protocol.NewGameMessage
-	(*AuthMessage)(nil),           // 6: protocol.AuthMessage
-	(*AuthSuccess)(nil),           // 7: protocol.AuthSuccess
-	(*timestamppb.Timestamp)(nil), // 8: google.protobuf.Timestamp
+	(*NewGameResponse)(nil),       // 6: protocol.NewGameResponse
+	(*AuthMessage)(nil),           // 7: protocol.AuthMessage
+	(*AuthSuccess)(nil),           // 8: protocol.AuthSuccess
+	(*timestamppb.Timestamp)(nil), // 9: google.protobuf.Timestamp
 }
 var file_api_proto_depIdxs = []int32{
 	3, // 0: protocol.Packet.paint:type_name -> protocol.PaintMessage
 	1, // 1: protocol.Packet.chat:type_name -> protocol.ChatMessage
 	4, // 2: protocol.Packet.game:type_name -> protocol.GameMessage
 	5, // 3: protocol.Packet.new_game:type_name -> protocol.NewGameMessage
-	6, // 4: protocol.Packet.auth:type_name -> protocol.AuthMessage
-	7, // 5: protocol.Packet.auth_success:type_name -> protocol.AuthSuccess
-	8, // 6: protocol.Packet.last_updated:type_name -> google.protobuf.Timestamp
-	2, // 7: protocol.PaintMessage.connected_users:type_name -> protocol.User
-	8, // [8:8] is the sub-list for method output_type
-	8, // [8:8] is the sub-list for method input_type
-	8, // [8:8] is the sub-list for extension type_name
-	8, // [8:8] is the sub-list for extension extendee
-	0, // [0:8] is the sub-list for field type_name
+	7, // 4: protocol.Packet.auth:type_name -> protocol.AuthMessage
+	8, // 5: protocol.Packet.auth_success:type_name -> protocol.AuthSuccess
+	6, // 6: protocol.Packet.new_game_res:type_name -> protocol.NewGameResponse
+	9, // 7: protocol.Packet.last_updated:type_name -> google.protobuf.Timestamp
+	2, // 8: protocol.PaintMessage.connected_users:type_name -> protocol.User
+	9, // [9:9] is the sub-list for method output_type
+	9, // [9:9] is the sub-list for method input_type
+	9, // [9:9] is the sub-list for extension type_name
+	9, // [9:9] is the sub-list for extension extendee
+	0, // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_api_proto_init() }
@@ -635,14 +730,16 @@ func file_api_proto_init() {
 		(*Packet_NewGame)(nil),
 		(*Packet_Auth)(nil),
 		(*Packet_AuthSuccess)(nil),
+		(*Packet_NewGameRes)(nil),
 	}
+	file_api_proto_msgTypes[6].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_proto_rawDesc), len(file_api_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   8,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
