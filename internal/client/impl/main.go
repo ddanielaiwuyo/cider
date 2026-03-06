@@ -40,27 +40,30 @@ func DialServer(port int, creds AuthCredentials) {
 		return
 	}
 
-	packetCh := fromServer(ctx, conn)
+	serverCh := fromServer(ctx, conn)
 	stdin := fromStdin(ctx)
-	// writer := toServer(ctx, conn)
-	// c := make(chan os.Signal, 1)
-	// signal.Notify(c)
+	writerCh := make(chan *pb.Packet)
+	defer close(writerCh)
+	toServer2(ctx, writerCh, conn)
 	for {
-		print("......")
 		select {
-		case packet := <-packetCh:
+		case packet, open := <-serverCh:
+			if !open {
+				slog.Info("server channel has been closed")
+				return
+			}
 			fmt.Println(" *notification")
 			handleResponse(packet)
-		case val := <-stdin:
+		case val, open := <-stdin:
+			if !open {
+				slog.Info("stdin channel has been closed")
+				return
+			}
 			packet := parseStdinVal(val)
 			if packet == nil {
-				println("[debug]  packet is nil")
 				continue
 			}
-
-			println("[debug]  writing to writer")
-			// writer <- packet
-			// println("[debug]  written to writer")
+			writerCh <- packet
 
 		}
 	}
