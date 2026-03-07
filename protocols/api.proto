@@ -1,0 +1,68 @@
+syntax = "proto3";
+package protocol;
+
+import "google/protobuf/timestamp.proto";
+option go_package = "gen/";
+
+message Packet {
+  string from = 1;
+  string  dest = 2;
+
+  oneof payload {
+    PaintMessage paint = 3;
+    ChatMessage chat = 4;
+    GameMessage game = 5;
+    NewGameMessage new_game = 6;
+    AuthMessage auth = 7;
+    AuthSuccess auth_success = 8;
+    NewGameResponse new_game_res = 9;
+  }
+
+  google.protobuf.Timestamp last_updated = 10;
+}
+
+message ChatMessage {
+  string content = 1;
+}
+
+message User {
+  string username = 1;
+  string id = 2;
+}
+
+// we're using one-time id because when a client
+// connects for the firstime, they need to provide 
+// basic creds like 'username', 'password' and 
+// we can check against the database.
+// after that we assing them a UUID that will 
+// be used to identify them through out their whole 
+// lifetime
+message PaintMessage {
+  string one_time_id = 1;
+  repeated User connected_users = 2;
+}
+
+message GameMessage {
+  string ssid = 1;
+  string play = 2;
+}
+
+message NewGameMessage {
+  string from = 1;
+  string dest = 2;
+}
+message NewGameResponse {
+  string ssid = 1;
+  string from = 2;
+  bool created = 3;
+  optional string info =  4;
+}
+
+message AuthMessage {
+  string username = 1;
+}
+
+message AuthSuccess {
+  int32 code = 1;
+  string content = 2;
+}
