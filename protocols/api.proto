@@ -45,6 +45,7 @@ message PaintMessage {
 message GameMessage {
   string ssid = 1;
   string play = 2;
+  // string rival = 3;
   int32 play_in = 3;
 }
 
@@ -57,7 +58,14 @@ message NewGameResponse {
   string from = 2;
   bool created = 3;
   optional string info =  4;
+  // this is supposed to 'replace' the 'play_in' field
+  // in the GameMessage, but since I'd want the server
+  // to be more 'authoritative' using the 'play_in' feels
+  // better since the clients are communicate with the server
+  // directly instead
   optional int32 tickerRate = 5;
+  // excuse my naming skills
+  string rival = 6;
 }
 
 message AuthMessage {

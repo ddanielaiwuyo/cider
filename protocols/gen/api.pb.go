@@ -364,10 +364,11 @@ func (x *PaintMessage) GetConnectedUsers() []*User {
 }
 
 type GameMessage struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Ssid          string                 `protobuf:"bytes,1,opt,name=ssid,proto3" json:"ssid,omitempty"`
-	Play          string                 `protobuf:"bytes,2,opt,name=play,proto3" json:"play,omitempty"`
-	PlayIn        int32                  `protobuf:"varint,3,opt,name=play_in,json=playIn,proto3" json:"play_in,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Ssid  string                 `protobuf:"bytes,1,opt,name=ssid,proto3" json:"ssid,omitempty"`
+	Play  string                 `protobuf:"bytes,2,opt,name=play,proto3" json:"play,omitempty"`
+	// string rival = 3;
+	PlayIn        int32 `protobuf:"varint,3,opt,name=play_in,json=playIn,proto3" json:"play_in,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -476,12 +477,19 @@ func (x *NewGameMessage) GetDest() string {
 }
 
 type NewGameResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Ssid          string                 `protobuf:"bytes,1,opt,name=ssid,proto3" json:"ssid,omitempty"`
-	From          string                 `protobuf:"bytes,2,opt,name=from,proto3" json:"from,omitempty"`
-	Created       bool                   `protobuf:"varint,3,opt,name=created,proto3" json:"created,omitempty"`
-	Info          *string                `protobuf:"bytes,4,opt,name=info,proto3,oneof" json:"info,omitempty"`
-	TickerRate    *int32                 `protobuf:"varint,5,opt,name=tickerRate,proto3,oneof" json:"tickerRate,omitempty"`
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Ssid    string                 `protobuf:"bytes,1,opt,name=ssid,proto3" json:"ssid,omitempty"`
+	From    string                 `protobuf:"bytes,2,opt,name=from,proto3" json:"from,omitempty"`
+	Created bool                   `protobuf:"varint,3,opt,name=created,proto3" json:"created,omitempty"`
+	Info    *string                `protobuf:"bytes,4,opt,name=info,proto3,oneof" json:"info,omitempty"`
+	// this is supposed to 'replace' the 'play_in' field
+	// in the GameMessage, but since I'd want the server
+	// to be more 'authoritative' using the 'play_in' feels
+	// better since the clients are communicate with the server
+	// directly instead
+	TickerRate *int32 `protobuf:"varint,5,opt,name=tickerRate,proto3,oneof" json:"tickerRate,omitempty"`
+	// excuse my naming skills
+	Rival         string `protobuf:"bytes,6,opt,name=rival,proto3" json:"rival,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -549,6 +557,13 @@ func (x *NewGameResponse) GetTickerRate() int32 {
 		return *x.TickerRate
 	}
 	return 0
+}
+
+func (x *NewGameResponse) GetRival() string {
+	if x != nil {
+		return x.Rival
+	}
+	return ""
 }
 
 type AuthMessage struct {
@@ -680,7 +695,7 @@ const file_api_proto_rawDesc = "" +
 	"\aplay_in\x18\x03 \x01(\x05R\x06playIn\"8\n" +
 	"\x0eNewGameMessage\x12\x12\n" +
 	"\x04from\x18\x01 \x01(\tR\x04from\x12\x12\n" +
-	"\x04dest\x18\x02 \x01(\tR\x04dest\"\xa9\x01\n" +
+	"\x04dest\x18\x02 \x01(\tR\x04dest\"\xbf\x01\n" +
 	"\x0fNewGameResponse\x12\x12\n" +
 	"\x04ssid\x18\x01 \x01(\tR\x04ssid\x12\x12\n" +
 	"\x04from\x18\x02 \x01(\tR\x04from\x12\x18\n" +
@@ -688,7 +703,8 @@ const file_api_proto_rawDesc = "" +
 	"\x04info\x18\x04 \x01(\tH\x00R\x04info\x88\x01\x01\x12#\n" +
 	"\n" +
 	"tickerRate\x18\x05 \x01(\x05H\x01R\n" +
-	"tickerRate\x88\x01\x01B\a\n" +
+	"tickerRate\x88\x01\x01\x12\x14\n" +
+	"\x05rival\x18\x06 \x01(\tR\x05rivalB\a\n" +
 	"\x05_infoB\r\n" +
 	"\v_tickerRate\")\n" +
 	"\vAuthMessage\x12\x1a\n" +

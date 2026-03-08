@@ -15,31 +15,24 @@ type GameState struct {
 }
 
 func HandleGamePacket(p *pb.Packet) {
-	if !GameMode && GameId == "" {
+	if !GameMode && GameId == "" && GameRival == "" {
 		slog.Info("recieved a game message with no ssid and false game state")
 		slog.Info("values", "IsGameMode", GameMode, "SSID", GameId)
 		return
 	}
 
 	gamePacket := p.GetGame()
-	nextPlay := gamePacket.PlayIn
 
-	log.Println("ssid -> ", gamePacket.Ssid)
-	log.Println("play -> ", gamePacket.Play)
-	log.Println("countdown ->", gamePacket.PlayIn)
-
-	fmt.Println("play in:")
-	for i := nextPlay; i >= 0; i-- {
-		fmt.Print(i)
-	}
-	fmt.Println()
+	log.Println("rival play -> ", gamePacket.Play)
+	log.Printf("play in %d seconds\n ->", gamePacket.PlayIn)
 
 	fmt.Println("collect input")
 }
 
 func parseGameMessage(input string) *pb.Packet {
+	// PaintCredentials.connId
 	p := &pb.Packet{
-		From: string(connId),
+		From: PaintCredentials.connId,
 		Dest: "server",
 		Payload: &pb.Packet_Game{
 			Game: &pb.GameMessage{

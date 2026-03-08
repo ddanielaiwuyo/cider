@@ -119,15 +119,13 @@ func handleConnection(mgr *manager, conn net.Conn) {
 }
 
 func handleMessage(mgr *manager, msg *pb.Packet) {
-	slog.Info("handling packet", slog.String("packet", fmt.Sprintf("%+v", msg)))
-
 	switch msg.Payload.(type) {
 	case *pb.Packet_Chat:
 		log.Println("packet is a chat type")
 
 	case *pb.Packet_Game:
 		log.Println("packet is a game type")
-		HandleGamePacket(mgr, msg.GetGame())
+		HandleGamePacket(mgr, msg)
 
 	case *pb.Packet_NewGame:
 		log.Println("packet is a new game type")

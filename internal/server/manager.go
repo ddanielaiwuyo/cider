@@ -13,12 +13,22 @@ import (
 
 type Player struct {
 	client *Client
-	Play   chan string
+	// Play   chan string
 }
 
 type GameSession struct {
 	SessionId string
 	Players   []*Player
+	Rate      int32
+	State     GameState
+}
+
+type GameState struct {
+	allPlays     string
+	lastPlayerId string
+}
+
+type AccumulatedGameState struct {
 }
 
 type Client struct {

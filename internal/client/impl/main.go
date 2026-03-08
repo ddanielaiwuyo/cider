@@ -69,10 +69,10 @@ func DialServer(port int, creds AuthCredentials) {
 	}
 }
 
-var connId string
+// var connId string
 var GameMode = false
 var GameId string
-var PlayedWith string
+var GameRival string
 
 func handleResponse(p *pb.Packet) {
 	switch p.Payload.(type) {
@@ -82,21 +82,21 @@ func handleResponse(p *pb.Packet) {
 
 	case *pb.Packet_Game:
 		HandleGamePacket(p)
-		slog.Info("[debug] game packet from server")
-		fmt.Printf("  #%s:   | ssid: %2s | newplay: %2s ", p.From, p.GetGame().Ssid, p.GetGame().GetPlay())
+		// fmt.Printf("  #%s:   | ssid: %2s | newplay: %2s ", p.From, p.GetGame().Ssid, p.GetGame().GetPlay())
 
 	case *pb.Packet_Paint:
 		handlePaintMessage(p)
 
 	case *pb.Packet_NewGameRes:
 		payload := p.GetNewGameRes()
-		slog.Info("[debug] new game response from server")
 		fmt.Printf(`
 		From: %2s  | GameSessionId: %2s  | Info: %2s \n
 		`, payload.From, payload.Ssid, *payload.Info,
 		)
 		GameMode = true
 		GameId = payload.Ssid
+		fmt.Println("[debug] rival gotten from client", payload.Rival)
+		GameRival = payload.Rival
 	}
 }
 
