@@ -20,8 +20,6 @@ type AuthCredentials struct {
 	Username string
 }
 
-// 138.68.165.148
-
 func DialServer(port int, creds AuthCredentials) {
 	addr := fmt.Sprintf(":%d", port)
 	conn, err := net.Dial("tcp", addr)
@@ -77,25 +75,22 @@ var GameRival string
 func handleResponse(p *pb.Packet) {
 	switch p.Payload.(type) {
 	case *pb.Packet_Chat:
-		slog.Info("[debug] chat packet from server")
 		fmt.Printf("  #%s:  %2s\n", p.From, p.GetChat().Content)
 
 	case *pb.Packet_Game:
 		HandleGamePacket(p)
-		// fmt.Printf("  #%s:   | ssid: %2s | newplay: %2s ", p.From, p.GetGame().Ssid, p.GetGame().GetPlay())
 
 	case *pb.Packet_Paint:
 		handlePaintMessage(p)
 
 	case *pb.Packet_NewGameRes:
 		payload := p.GetNewGameRes()
-		fmt.Printf(`
-		From: %2s  | GameSessionId: %2s  | Info: %2s \n
-		`, payload.From, payload.Ssid, *payload.Info,
-		)
+		// fmt.Printf(`
+		// From: %2s  | GameSessionId: %2s  | Info: %2s \n
+		// `, payload.From, payload.Ssid, *payload.Info,
+		// )
 		GameMode = true
 		GameId = payload.Ssid
-		fmt.Println("[debug] rival gotten from client", payload.Rival)
 		GameRival = payload.Rival
 	}
 }
@@ -172,7 +167,6 @@ func parseStdinVal(input string) *pb.Packet {
 		return packet
 	}
 
-	fmt.Println(" [debug] normal chat msg")
 	return nil
 }
 
