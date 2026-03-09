@@ -14,15 +14,6 @@ import (
 	"github.com/persona-mp3/internal/server"
 )
 
-// We want the user to provie
-// a port number and what mode to run the application
-// For example
-// go run main.go 4000 dev
-// Would just use the default application settings as seen
-// in DBConfig{}
-// go run main.go PROD
-// will read from envs
-
 func loadEnv() *db.DBConfig {
 	if err := godotenv.Load("./.env"); err != nil {
 		log.Fatalf("error in loading .env, please make sure that it's set up properly")
@@ -100,29 +91,3 @@ func main() {
 		log.Fatal(err)
 	}
 }
-
-// func main() {
-// 	//  use ENV instead!
-// 	dbConf := &db.DBConfig{
-// 		Username: "persona",
-// 		Password: "persona-mp3",
-// 		Database: "cidervine",
-// 		Port:     5432,
-// 	}
-
-// 	conn, err := db.Connect(dbConf)
-// 	if err != nil {
-// 		fmt.Fprintf(os.Stderr, "%s\n", err)
-// 		os.Exit(1)
-// 	}
-
-// 	manager := server.NewManager(conn)
-// 	ctx, cancel := context.WithCancel(context.Background())
-// 	defer cancel()
-
-// 	go manager.Listen(ctx)
-
-// 	if err := server.RunServer(manager); err != nil {
-// 		log.Fatal(err)
-// 	}
-// }
