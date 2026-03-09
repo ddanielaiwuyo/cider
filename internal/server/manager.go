@@ -13,7 +13,6 @@ import (
 
 type Player struct {
 	client *Client
-	// Play   chan string
 }
 
 type GameSession struct {

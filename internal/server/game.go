@@ -150,10 +150,6 @@ func HandleGamePacket(mgr *manager, packet *pb.Packet) {
 }
 
 func (gs *GameState) updateState(playerId string, gm *pb.GameMessage) bool {
-	for i := range 5 {
-		_ = i
-		fmt.Println()
-	}
 	if playerId == gs.lastPlayerId {
 		slog.Info("not player turn")
 		return false
@@ -166,7 +162,6 @@ func (gs *GameState) updateState(playerId string, gm *pb.GameMessage) bool {
 	gs.playedAt = now
 	gs.deadline = now.Add(defaultDuration)
 	slog.Info("updated game state successfully")
-	fmt.Printf("new deadline: %v\n", gs.deadline)
 	return true
 }
 
