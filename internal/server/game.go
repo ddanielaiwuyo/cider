@@ -32,6 +32,10 @@ func CreateGameNewGameSession(mgr *manager, req *pb.NewGameMessage) {
 		SessionId: gameSessionId,
 		Players:   []*Player{player1, player2},
 		Rate:      defaultTickerRate,
+		State: &GameState{
+			lastPlayerId: string(player2.client.userId),
+			updatedState: "",
+		},
 	}
 
 	mgr.GameSessions[gameSessionId] = currSession
@@ -93,6 +97,9 @@ func HandleGamePacket(mgr *manager, packet *pb.Packet) {
 		return
 	}
 
+	// so for evrey new play we want to ipdate teh state
+	updateGameState(session.State, packet.From, gameMessage)
+
 	for _, player := range session.Players {
 		if packet.From == string(player.client.userId) {
 			continue
@@ -102,26 +109,22 @@ func HandleGamePacket(mgr *manager, packet *pb.Packet) {
 			Dest: string(player.client.userId),
 			Payload: &pb.Packet_Game{
 				Game: &pb.GameMessage{
-					Play: gameMessage.Play,
-					Ssid: ssid,
+					// the client can peice the plays together
+					// as what the server sends is always the updated game
+					Play:   session.State.updatedState,
+					Ssid:   ssid,
+					PlayIn: defaultTickerRate,
 				},
 			},
 		}
 
-		log.Println("[debug] game_play sent to ", player.client.username)
 	}
 
-	log.Printf("player %s: %s\n", packet.From, gameMessage.Play)
-	// not sure if the clients need to send their rival in
-	// every request from now on, because the server automatically handles that
-	// by just broadcasting to all the gamers in a session
-	// log.Println("[debug] sent to rival:", gameMessage.Rival, packet.From)
-	log.Println("[debug] broadcast game to all players")
-
+	log.Println("[debug] broadcast updated state to all players")
 }
 
-/*
-A sends CHALLENGE B
-B -> Rival: A
-A -> Rival: B
-*/
+func updateGameState(gs *GameState, playerId string, gm *pb.GameMessage) {
+	gs.lastPlayerId = playerId
+	gs.updatedState += fmt.Sprintf("%s\n", gm.Play)
+	log.Println("updated game state")
+}

@@ -20,15 +20,12 @@ type GameSession struct {
 	SessionId string
 	Players   []*Player
 	Rate      int32
-	State     GameState
+	State     *GameState
 }
 
 type GameState struct {
-	allPlays     string
 	lastPlayerId string
-}
-
-type AccumulatedGameState struct {
+	updatedState string
 }
 
 type Client struct {
@@ -73,8 +70,8 @@ func (m *manager) Listen(ctx context.Context) {
 		case msg := <-m.deliver:
 			m.deliverMessage(msg)
 
-		case q := <-m.query:
 			// returns result to caller via channel
+		case q := <-m.query:
 			m.executeQuery(ctx, q)
 
 		case <-ctx.Done():

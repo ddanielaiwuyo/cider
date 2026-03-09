@@ -24,13 +24,12 @@ func HandleGamePacket(p *pb.Packet) {
 	gamePacket := p.GetGame()
 
 	log.Println("rival play -> ", gamePacket.Play)
-	log.Printf("play in %d seconds\n ->", gamePacket.PlayIn)
+	log.Println("ticker rate -> ", gamePacket.PlayIn)
 
 	fmt.Println("collect input")
 }
 
 func parseGameMessage(input string) *pb.Packet {
-	// PaintCredentials.connId
 	p := &pb.Packet{
 		From: PaintCredentials.connId,
 		Dest: "server",

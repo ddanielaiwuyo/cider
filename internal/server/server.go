@@ -124,7 +124,6 @@ func handleMessage(mgr *manager, msg *pb.Packet) {
 		log.Println("packet is a chat type")
 
 	case *pb.Packet_Game:
-		log.Println("packet is a game type")
 		HandleGamePacket(mgr, msg)
 
 	case *pb.Packet_NewGame:
@@ -134,8 +133,8 @@ func handleMessage(mgr *manager, msg *pb.Packet) {
 	case *pb.Packet_Paint:
 		log.Println("packet is a paint game type")
 
-	default:
-		log.Println("should we honour this msg type?")
+		// default:
+		// 	log.Println("should we honour this msg type?")
 	}
 }
 
