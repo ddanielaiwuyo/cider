@@ -39,9 +39,9 @@ func loadEnv() *db.DBConfig {
 	if err != nil {
 		slog.Error("error loading PSQL_PORT", "err", err)
 		slog.Warn("Using default port")
+	} else {
+		_port = p
 	}
-
-	_port = p
 
 	return &db.DBConfig{
 		Username: username,

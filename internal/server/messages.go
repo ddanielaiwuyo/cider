@@ -47,14 +47,3 @@ func createAuthSuccessMessage(code int32, content string) *pb.AuthSuccess {
 
 	return &pb.AuthSuccess{Code: code, Content: content}
 }
-
-type MessageType int
-
-const (
-	NewGame MessageType = iota
-)
-
-// func newGameMessage(p *pb.NewGameMessage, ssid string){
-// 	gm := &pb.GameMessage{
-// 	}
-// }
