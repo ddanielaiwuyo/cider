@@ -13,7 +13,6 @@ import (
 
 type Player struct {
 	client *Client
-	// Play   chan string
 }
 
 type GameSession struct {
@@ -21,13 +20,14 @@ type GameSession struct {
 	Players   []*Player
 	Rate      int32
 	State     *GameState
+	interrupt chan any
 }
 
 type GameState struct {
 	lastPlayerId string
 	playedAt     time.Time
 	updatedState string
-	deadline  time.Time
+	deadline     time.Time
 }
 
 type Client struct {
