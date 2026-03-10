@@ -13,6 +13,15 @@ import (
 	pb "github.com/persona-mp3/protocols/gen"
 )
 
+// We need to specify the server certificate to
+// include into the TLS protocol. If it's not 
+// included, the server would reject the connection
+// or in another case (running on macOS), would receive
+// an error saying that the server cannot be trusted.
+// Especially since this is in DEV mode, this would be the 
+// way to test secure connections for now. Later on
+// this would be default when the server is deployed, unless 
+// running a local instance on your machine
 func loadServerTLSCert() (*x509.CertPool, error) {
 	pem, err := os.ReadFile("./server.crt")
 	if err != nil {
@@ -60,18 +69,6 @@ func dialServer(ipAddr string) (net.Conn, error) {
 	log.Println("[INFO] successful open connection handshake")
 	return conn, err
 }
-
-// func loadTls() *tls.Config {
-// 	log.SetFlags(log.Lshortfile)
-
-// 	cert, err := tls.LoadX509KeyPair("client.crt", "client.key")
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-
-// 	config := &tls.Config{Certificates: []tls.Certificate{cert}}
-// 	return config
-// }
 
 func MainDialer(addr string, creds AuthCredentials, secure bool) {
 	var conn net.Conn
