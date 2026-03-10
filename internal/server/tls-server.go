@@ -32,7 +32,7 @@ func RunTLSServer(mgr *manager, port int) error {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			log.Println("[debug] error accepting connection", conn.RemoteAddr().String())
+			log.Println("[debug] error accepting connection", err)
 			continue
 		}
 
@@ -40,6 +40,8 @@ func RunTLSServer(mgr *manager, port int) error {
 			conn.Close()
 			continue
 		}
+
+		log.Println("[INFO] tls successful for client", conn.RemoteAddr().String())
 
 		go handleConnection(mgr, conn)
 	}
