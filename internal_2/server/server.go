@@ -95,7 +95,11 @@ func handleConnection(mgr *Manager, conn net.Conn) {
 	for {
 		content, err := framer.ReadWirePacket(conn, headerSize)
 		if err != nil && errors.Is(err, io.EOF) {
-			errLogger.Printf("client disconnected %s\n", err)
+			if errors.Is(err, io.EOF) {
+				errLogger.Printf("client disconnected %s\n", err)
+			} else {
+				errLogger.Printf("unexpected error: %s\n", err)
+			}
 			return
 		}
 		packet, err := framer.UnmarhsallWirePacket(content)
@@ -111,7 +115,6 @@ func handleConnection(mgr *Manager, conn net.Conn) {
 
 func sendPaintMessage(mgr *Manager, conn net.Conn, id connID) error {
 	snapshot := mgr.Snapshot()
-	// snapshot :=
 
 	packet := &pb.Packet{
 		From: ServerId,
