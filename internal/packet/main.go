@@ -14,6 +14,7 @@ import (
 
 // see bug_reports/max_payload.md
 const MAX_PAYLOAD = 1024 * 1024
+
 var (
 	ErrMaxPayload = errors.New("Max Payload gotten from client")
 )
@@ -32,6 +33,13 @@ func MarshallPacket(packet *pb.Packet, headerLength int) ([]byte, error) {
 }
 
 func ParseWirePacket(data []byte) (*pb.Packet, error) {
+	msg := &pb.Packet{}
+	if err := proto.Unmarshal(data, msg); err != nil {
+		return nil, fmt.Errorf("could not parse data: %w", err)
+	}
+	return msg, nil
+}
+func UnmarhsallWirePacket(data []byte) (*pb.Packet, error) {
 	msg := &pb.Packet{}
 	if err := proto.Unmarshal(data, msg); err != nil {
 		return nil, fmt.Errorf("could not parse data: %w", err)

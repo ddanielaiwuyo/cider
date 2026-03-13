@@ -3,6 +3,7 @@ package server
 import (
 	"net"
 
+	"github.com/jackc/pgx/v5"
 	pb "github.com/persona-mp3/protocols/gen"
 )
 
@@ -13,6 +14,9 @@ type Command struct {
 type connID string
 
 type Query struct {
+	query  string
+	params []any
+	result chan pgx.Row
 }
 
 type Client struct {

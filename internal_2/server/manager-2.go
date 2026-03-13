@@ -32,19 +32,30 @@ type GameManager struct {
 	// to d players, or end sessions
 	// or for the gameManager to send messages a client
 	privateCh chan string
-	outbound  chan Command
+	outbound  chan *Command
 }
+
 type Manager struct {
-	connections map[connID]Client
-	register    chan Client
+	connections map[connID]*Client
+	register    chan *Client
 	remove      chan connID
 	deliver     chan *pb.Packet
 	dbconn      *pgx.Conn
 	query       chan Query
 	game        chan GamePacket
 	context     context.Context
-	inbound     chan Command
+	inbound     chan *Command
 	GameManager
+}
+
+func NewGameManager() *GameManager {
+	return &GameManager{
+		currentPlayers: make(map[string]string),
+		Sessions:       make(map[string]*GameSession),
+		NewSessionCh:   make(chan *GameSession, 60),
+		Game:           make(chan GamePacket, 60),
+		privateCh:      make(chan string, 60),
+	}
 }
 
 func (m *Manager) Listen(ctx context.Context) {
@@ -75,14 +86,18 @@ func (m *Manager) Listen(ctx context.Context) {
 	}
 }
 
-func NewGameManager() *GameManager {
-	return &GameManager{
-		currentPlayers: make(map[string]string),
-		Sessions:       make(map[string]*GameSession),
-		NewSessionCh:   make(chan *GameSession, 60),
-		Game:           make(chan GamePacket, 60),
-		privateCh:      make(chan string, 60),
+// Snaphost returns all actively connected users 
+// that the manager currently has. This can be used 
+// primarily as the Paint message to send to new clients
+// and subsequently to update all connected users about active
+// and inactive users
+// It returns the uuid of each player mapped to their username
+func (mgr *Manager) Snapshot() map[string]string {
+	snapshot := make(map[string]string)
+	for connId, client := range mgr.connections {
+		snapshot[string(connId)] = client.username
 	}
+	return snapshot
 }
 
 func (gm *GameManager) Listen(ctx context.Context) {
@@ -122,16 +137,12 @@ func (gm *GameManager) processPlay(play GamePacket) {
 
 func (gm *GameManager) newGameSession(gs *GameSession) {
 	// check if these palyers are already in a game
-	// would be nice if go had HashSets, this is supper inefficient for now
-	for activePlayer, _ := range gm.currentPlayers {
-		for _, newPlayer := range gs.Players {
-			if string(newPlayer.connID) == activePlayer {
-				log.Printf(`cannot create session for %s and %s, player %s is already in a game`,
-					newPlayer, activePlayer, activePlayer,
-				)
-				gs.created <- false
-				return
-			}
+	for _, player := range gs.Players {
+		activeSession, found := gm.currentPlayers[string(player.connID)]
+		if found {
+			log.Printf("could not create new game session for %s,  already exists in %s\n", player.connID, activeSession)
+			gs.created <- false
+			break
 		}
 	}
 
@@ -160,17 +171,7 @@ func (gm *GameManager) interruptGame(playerId string) {
 		return
 	}
 
-	// so how do we now interact with the manager? 😂
-	// since that's the only one responsible for writing
-	// to the sockets
-	// so the 'privateCh' was called 'dropCh' for the manager
-	// to tell the gm to end a game if they were in one
-	// but now, it's a two way communication...
-	// and then, we also need to communicate with the sessionCh
-	// to stop everything, using contexts? but now, how do i
-	// call cancel on  particular GameSession go-routine, else
-	// we use a state channel
-	gm.privateCh <- "send_this_msg_to_uuid_67420"
+	gm.outbound <- &Command{Id: "game_manager"}
 	gameSession.gameState <- Terminate
 	log.Printf("successfully sent terminate cmd to game session\n")
 }

@@ -315,6 +315,7 @@ type PaintMessage struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OneTimeId      string                 `protobuf:"bytes,1,opt,name=one_time_id,json=oneTimeId,proto3" json:"one_time_id,omitempty"`
 	ConnectedUsers []*User                `protobuf:"bytes,2,rep,name=connected_users,json=connectedUsers,proto3" json:"connected_users,omitempty"`
+	Snapshot       map[string]string      `protobuf:"bytes,3,rep,name=snapshot,proto3" json:"snapshot,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -359,6 +360,13 @@ func (x *PaintMessage) GetOneTimeId() string {
 func (x *PaintMessage) GetConnectedUsers() []*User {
 	if x != nil {
 		return x.ConnectedUsers
+	}
+	return nil
+}
+
+func (x *PaintMessage) GetSnapshot() map[string]string {
+	if x != nil {
+		return x.Snapshot
 	}
 	return nil
 }
@@ -487,8 +495,7 @@ type NewGameResponse struct {
 	// to be more 'authoritative' using the 'play_in' feels
 	// better since the clients are communicate with the server
 	// directly instead
-	TickerRate *int32 `protobuf:"varint,5,opt,name=tickerRate,proto3,oneof" json:"tickerRate,omitempty"`
-	// excuse my naming skills
+	TickerRate    *int32 `protobuf:"varint,5,opt,name=tickerRate,proto3,oneof" json:"tickerRate,omitempty"`
 	Rival         string `protobuf:"bytes,6,opt,name=rival,proto3" json:"rival,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -685,10 +692,14 @@ const file_api_proto_rawDesc = "" +
 	"\acontent\x18\x01 \x01(\tR\acontent\"2\n" +
 	"\x04User\x12\x1a\n" +
 	"\busername\x18\x01 \x01(\tR\busername\x12\x0e\n" +
-	"\x02id\x18\x02 \x01(\tR\x02id\"g\n" +
+	"\x02id\x18\x02 \x01(\tR\x02id\"\xe6\x01\n" +
 	"\fPaintMessage\x12\x1e\n" +
 	"\vone_time_id\x18\x01 \x01(\tR\toneTimeId\x127\n" +
-	"\x0fconnected_users\x18\x02 \x03(\v2\x0e.protocol.UserR\x0econnectedUsers\"N\n" +
+	"\x0fconnected_users\x18\x02 \x03(\v2\x0e.protocol.UserR\x0econnectedUsers\x12@\n" +
+	"\bsnapshot\x18\x03 \x03(\v2$.protocol.PaintMessage.SnapshotEntryR\bsnapshot\x1a;\n" +
+	"\rSnapshotEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"N\n" +
 	"\vGameMessage\x12\x12\n" +
 	"\x04ssid\x18\x01 \x01(\tR\x04ssid\x12\x12\n" +
 	"\x04play\x18\x02 \x01(\tR\x04play\x12\x17\n" +
@@ -725,7 +736,7 @@ func file_api_proto_rawDescGZIP() []byte {
 	return file_api_proto_rawDescData
 }
 
-var file_api_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_api_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_api_proto_goTypes = []any{
 	(*Packet)(nil),                // 0: protocol.Packet
 	(*ChatMessage)(nil),           // 1: protocol.ChatMessage
@@ -736,23 +747,25 @@ var file_api_proto_goTypes = []any{
 	(*NewGameResponse)(nil),       // 6: protocol.NewGameResponse
 	(*AuthMessage)(nil),           // 7: protocol.AuthMessage
 	(*AuthSuccess)(nil),           // 8: protocol.AuthSuccess
-	(*timestamppb.Timestamp)(nil), // 9: google.protobuf.Timestamp
+	nil,                           // 9: protocol.PaintMessage.SnapshotEntry
+	(*timestamppb.Timestamp)(nil), // 10: google.protobuf.Timestamp
 }
 var file_api_proto_depIdxs = []int32{
-	3, // 0: protocol.Packet.paint:type_name -> protocol.PaintMessage
-	1, // 1: protocol.Packet.chat:type_name -> protocol.ChatMessage
-	4, // 2: protocol.Packet.game:type_name -> protocol.GameMessage
-	5, // 3: protocol.Packet.new_game:type_name -> protocol.NewGameMessage
-	7, // 4: protocol.Packet.auth:type_name -> protocol.AuthMessage
-	8, // 5: protocol.Packet.auth_success:type_name -> protocol.AuthSuccess
-	6, // 6: protocol.Packet.new_game_res:type_name -> protocol.NewGameResponse
-	9, // 7: protocol.Packet.last_updated:type_name -> google.protobuf.Timestamp
-	2, // 8: protocol.PaintMessage.connected_users:type_name -> protocol.User
-	9, // [9:9] is the sub-list for method output_type
-	9, // [9:9] is the sub-list for method input_type
-	9, // [9:9] is the sub-list for extension type_name
-	9, // [9:9] is the sub-list for extension extendee
-	0, // [0:9] is the sub-list for field type_name
+	3,  // 0: protocol.Packet.paint:type_name -> protocol.PaintMessage
+	1,  // 1: protocol.Packet.chat:type_name -> protocol.ChatMessage
+	4,  // 2: protocol.Packet.game:type_name -> protocol.GameMessage
+	5,  // 3: protocol.Packet.new_game:type_name -> protocol.NewGameMessage
+	7,  // 4: protocol.Packet.auth:type_name -> protocol.AuthMessage
+	8,  // 5: protocol.Packet.auth_success:type_name -> protocol.AuthSuccess
+	6,  // 6: protocol.Packet.new_game_res:type_name -> protocol.NewGameResponse
+	10, // 7: protocol.Packet.last_updated:type_name -> google.protobuf.Timestamp
+	2,  // 8: protocol.PaintMessage.connected_users:type_name -> protocol.User
+	9,  // 9: protocol.PaintMessage.snapshot:type_name -> protocol.PaintMessage.SnapshotEntry
+	10, // [10:10] is the sub-list for method output_type
+	10, // [10:10] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_api_proto_init() }
@@ -776,7 +789,7 @@ func file_api_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_proto_rawDesc), len(file_api_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
