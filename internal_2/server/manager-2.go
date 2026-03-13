@@ -167,7 +167,7 @@ func (gm *GameManager) newGameSession(gs *GameSession) {
 		if found {
 			log.Printf("could not create new game session for %s,  already exists in %s\n", player.connID, activeSession)
 			gs.created <- false
-			break
+			return
 		}
 	}
 
