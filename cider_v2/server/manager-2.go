@@ -252,6 +252,6 @@ func (gm *GameManager) interruptGame(playerId string) {
 	}
 
 	gm.outbound <- &Command{Id: "game_manager"}
-	gameSession.gameState <- Terminate
+	gameSession.cmd <- TerminateGame
 	infoLogger.Printf("successfully sent terminate cmd to game session\n")
 }
