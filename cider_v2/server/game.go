@@ -1,17 +1,12 @@
 package server
 
 import (
-	"context"
-
 	pb "github.com/persona-mp3/protocols/gen"
 )
 
-func handleGameMessage(mgr *Manager, msg *pb.GameMessage) {
-	infoLogger.Printf("handling game msg: %+v\n", msg)
-}
-
-func handleNewGameMessage(context context.Context, mgr *Manager, msg *pb.NewGameMessage) {
-	infoLogger.Printf("handling new game msg: %+v\n", msg)
+func handleGameMessage(mgr *Manager, packet *pb.Packet) {
+	infoLogger.Println("handling game packet")
+	mgr.game <- packet
 }
 
 func handleChatMessage(mgr *Manager, msg *pb.ChatMessage) {
@@ -21,4 +16,3 @@ func handleChatMessage(mgr *Manager, msg *pb.ChatMessage) {
 func handleUnidentifiedPacket(mgr *Manager, msg *pb.Packet) {
 	infoLogger.Printf("handling unidentified packet: %+v\n", msg)
 }
-

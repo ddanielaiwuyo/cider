@@ -37,6 +37,7 @@ func fromServer(ctx context.Context, conn net.Conn) <-chan *pb.Packet {
 				continue
 			}
 
+			fmt.Printf("%v\n", packet)
 			select {
 			case <-ctx.Done():
 				return

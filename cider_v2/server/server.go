@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"time"
 
 	"github.com/google/uuid"
 	framer "github.com/persona-mp3/internal/packet"
@@ -54,7 +55,7 @@ func handleConnection(mgr *Manager, conn net.Conn) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	_username, isAuth := authClient(ctx, mgr, conn)
+	username, isAuth := authClient(ctx, mgr, conn)
 	if !isAuth {
 		infoLogger.Printf("could not authenticate connection\n")
 
@@ -86,7 +87,7 @@ func handleConnection(mgr *Manager, conn net.Conn) {
 		errLogger.Println(err)
 		return
 	}
-	mgr.register <- &Client{connID: connId, username: _username, conn: conn}
+	mgr.register <- &Client{connID: connId, username: username, conn: conn}
 	defer func() {
 		mgr.remove <- connId
 	}()
@@ -147,11 +148,11 @@ func routePacket(ctx context.Context, mgr *Manager, packet *pb.Packet) {
 
 	case *pb.Packet_Game:
 		infoLogger.Println("game packet received")
-		handleGameMessage(mgr, packet.GetGame())
+		handleGameMessage(mgr, packet)
 
 	case *pb.Packet_NewGame:
 		infoLogger.Println("new game packet received")
-		handleNewGameMessage(ctx, mgr, packet.GetNewGame())
+		handleNewGameMessage(ctx, mgr, packet)
 
 	case *pb.Packet_Paint:
 		infoLogger.Println("new paint packet received")
@@ -162,6 +163,127 @@ func routePacket(ctx context.Context, mgr *Manager, packet *pb.Packet) {
 	}
 }
 
+func handleNewGameMessage(ctx context.Context, mgr *Manager, msg *pb.Packet) {
+	infoLogger.Printf("handling new game msg: %+v\n", msg)
+	createNewGameSession(ctx, mgr, msg)
+}
+
+func createNewGameSession(context context.Context, mgr *Manager, packet *pb.Packet) {
+	activeUsers := mgr.Snapshot()
+	// check if the recipient is active
+	destUsername, found := activeUsers[packet.GetNewGame().Dest]
+	if !found {
+		infoLogger.Printf("%s requested a game challenge with %s, but %s isn't couldn't be found\n", packet.From, packet.Dest)
+		return
+	}
+
+	ssid := uuid.NewString()
+	srcUsername := activeUsers[packet.From]
+	matchInfo := fmt.Sprintf(` 
+	STARTING GAME
+	  Home: %s
+	  Away: %s
+		TimeRate: %d
+	`, srcUsername, destUsername, defaultTickerRate)
+
+	initialState := &GameState{}
+	session := &GameSession{
+		SessionId: ssid,
+		Players:   []connID{connID(packet.From), connID(packet.GetNewGame().Dest)},
+		Rate:      defaultTickerRate,
+		interrupt: make(chan any),
+		created:   make(chan bool, 1),
+		State:     initialState,
+		cmd:       make(chan GameCommand),
+	}
+	mgr.GameManager.NewSessionCh <- session
+
+	created := <-session.created
+	close(session.created)
+	errorMsg := `Could not create game session because user is not active`
+	if !created {
+		// TODO tell the challenger that the session couldn't made
+		errLogger.Println(errorMsg)
+		mgr.deliver <- &pb.Packet{
+			From: ServerId,
+			Dest: packet.From,
+			Payload: &pb.Packet_NewGameRes{
+				NewGameRes: &pb.NewGameResponse{
+					Created: false,
+					Info:    &errorMsg,
+					From:    ServerId,
+				},
+			},
+		}
+		return
+	}
+
+	infoLogger.Println("game session successfully made, sending out begin msg")
+	fmt.Println("sending out challenger_init_msg")
+	// for challenger
+
+	fmt.Println("game_id_to_send:", ssid)
+	mgr.deliver <- &pb.Packet{
+		From: ServerId,
+		Dest: packet.From,
+		Payload: &pb.Packet_NewGameRes{
+			NewGameRes: &pb.NewGameResponse{
+				Created:    true,
+				Ssid:       ssid,
+				Info:       &matchInfo,
+				From:       ServerId,
+				Rival:      packet.Dest,
+				TickerRate: &defaultTickerRate,
+			},
+		},
+	}
+
+	// for rival
+	fmt.Println("sending out rival_init_msg")
+	mgr.deliver <- &pb.Packet{
+		From: ServerId,
+		Dest: packet.GetNewGame().Dest,
+		Payload: &pb.Packet_NewGameRes{
+			NewGameRes: &pb.NewGameResponse{
+				Created:    true,
+				Ssid:       ssid,
+				Info:       &matchInfo,
+				From:       ServerId,
+				Rival:      packet.From,
+				TickerRate: &defaultTickerRate,
+			},
+		},
+	}
+
+	go func() {
+		fmt.Println("started ticker")
+		// dur := defaultTickerRate
+		ticker := time.NewTicker(8 * time.Second)
+		// ticker := time.NewTicker(time.Duration(defaultTickerRate) * time.Second)
+		defer ticker.Stop()
+		defer fmt.Println("session terminated")
+
+		for {
+			select {
+			case <-ticker.C:
+				log.Println("hand-over turn")
+				ticker.Reset(8 * time.Second)
+
+			case <-session.interrupt:
+				fmt.Println("new game play, refreshing ticker")
+				ticker.Reset(8 * time.Second)
+
+			case cmd := <-session.cmd:
+				switch cmd {
+				case TerminateGame:
+					infoLogger.Printf("terminating %s session-goroutine\n", session.SessionId)
+					return
+				}
+			}
+		}
+	}()
+
+}
 func genID() connID {
 	return connID(uuid.NewString())
 }
