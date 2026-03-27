@@ -24,6 +24,10 @@ var (
 	errLogger              = log.New(os.Stdout, "[ERROR] ", log.Lshortfile)
 )
 
+var (
+	defaultTickerRate int32 = 8
+)
+
 func StartServer(addr string, mgr *Manager) error {
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -104,10 +108,11 @@ func handleConnection(mgr *Manager, conn net.Conn) {
 			return
 		}
 		packet, err := framer.UnmarhsallWirePacket(content)
-		// TODO would be nice to send them a bad request response here
+
+		// drop the packet for a bad encoding
 		if err != nil {
 			errLogger.Printf("unmarhshalling wire packet failed: %s\n", err)
-			return
+			continue
 		}
 
 		routePacket(ctx, mgr, packet)
@@ -167,17 +172,18 @@ func handleNewGameMessage(mgr *Manager, msg *pb.Packet) {
 	infoLogger.Printf("handling new game msg: %+v\n", msg)
 	createNewGameSession(mgr, msg)
 }
+
 // REVIEW
 // Here, we basically check if these players are active
 // If active, tell the manager to create a session *1
-// If successfully or otherwise inform both clients 
+// If successfully or otherwise inform both clients
 // through m.deliver <- Packet *2
 // Now, i'm starting to get a bit noisy, but what if they never respond?
-// This should be blocking, in some sense, but we shouldn't keep the 
-// client waiting, so it's best to add a timeout here. If gameServer 
-// doesn't response withing 1-1.5s we send error message, 
+// This should be blocking, in some sense, but we shouldn't keep the
+// client waiting, so it's best to add a timeout here. If gameServer
+// doesn't response withing 1-1.5s we send error message,
 // and it's worth running this on a seperate go routine or timeout
-// since we're sending messages to the manager. I'll leave that up 
+// since we're sending messages to the manager. I'll leave that up
 // to you.
 func createNewGameSession(mgr *Manager, packet *pb.Packet) {
 	activeUsers := mgr.Snapshot()
@@ -207,14 +213,11 @@ func createNewGameSession(mgr *Manager, packet *pb.Packet) {
 		State:     initialState,
 		cmd:       make(chan GameCommand),
 	}
-	mgr.GameManager.NewSessionCh <- session
 
-	created := <-session.created
-	close(session.created)
-
-	errorMsg := `Could not create game session because user is not active`
-	if !created {
-		// tell the challenger that the session couldn't made
+	var responseTimeout = 3 * time.Second
+	timer := time.NewTimer(responseTimeout)
+	defer func() {
+		errorMsg := `Could not create game session because user is not active`
 		errLogger.Println(errorMsg)
 		mgr.deliver <- &pb.Packet{
 			From: ServerId,
@@ -227,13 +230,31 @@ func createNewGameSession(mgr *Manager, packet *pb.Packet) {
 				},
 			},
 		}
+
+	}()
+	select {
+	case <-timer.C:
+		infoLogger.Printf("timer passed and server did not send response for game creation\n")
+		return
+	case mgr.GameManager.NewSessionCh <- session:
+	}
+
+	// server should respond immediately
+	created := <-session.created
+	if !created {
 		return
 	}
 
 	infoLogger.Println("game session successfully made, sending out begin msg")
 	// for challenger
 	fmt.Println("game_id_to_send:", ssid)
-	mgr.deliver <- &pb.Packet{
+	if !timer.Stop() {
+		<-timer.C
+	}
+
+	timer.Reset(responseTimeout)
+
+	challengerPacket := &pb.Packet{
 		From: ServerId,
 		Dest: packet.From,
 		Payload: &pb.Packet_NewGameRes{
@@ -248,9 +269,7 @@ func createNewGameSession(mgr *Manager, packet *pb.Packet) {
 		},
 	}
 
-	// for rival
-	fmt.Println("sending out rival_init_msg")
-	mgr.deliver <- &pb.Packet{
+	rivalPacket := &pb.Packet{
 		From: ServerId,
 		Dest: packet.GetNewGame().Dest,
 		Payload: &pb.Packet_NewGameRes{
@@ -265,10 +284,16 @@ func createNewGameSession(mgr *Manager, packet *pb.Packet) {
 		},
 	}
 
-	// REVIEW: a little comment would be nice for someone else 
-	// to know that this is controlled by GameManager, for each 
-	// game session. But this is something we might have to discuss
-	// because how feasible is this for alot of game sessions?
+	for _, pkt := range []*pb.Packet{challengerPacket, rivalPacket} {
+		select {
+		case <-timer.C:
+			infoLogger.Printf("could not send NewGameResponse to players due to timeout")
+			return
+		case mgr.deliver <- pkt:
+		}
+	}
+
+	// this routine is handled by the game server, and is the only one allowed to terminate it
 	go func() {
 		fmt.Println("started ticker")
 		ticker := time.NewTicker(8 * time.Second)
