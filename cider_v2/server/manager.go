@@ -193,4 +193,3 @@ func (mgr *Manager) sendPacket(packet *pb.Packet) {
 		mgr.remove <- connID(destID)
 	}
 }
-

@@ -15,17 +15,13 @@ func handleUnidentifiedPacket(mgr *Manager, msg *pb.Packet) {
 	infoLogger.Printf("handling unidentified packet: %+v\n", msg)
 }
 
-
 func (gm *GameManager) Listen(ctx context.Context) {
 	infoLogger.Println("game manager listening...")
 	for {
 		select {
 		case newPlay := <-gm.Game:
 			infoLogger.Printf("new game packet %s\n", newPlay)
-			// REVIEW: since this function sends at outbound to the manager, might be worthwhiile
-			// running it in a seperate goroutine, incase it's blocking. But I'm not sure 
-			// if it's worthwhile, doing that, than just setting a timeout.
-			gm.processPlay(newPlay) 
+			gm.processPlay(newPlay)
 
 		case newSession := <-gm.NewSessionCh:
 			gm.newGameSession(newSession)
@@ -55,18 +51,18 @@ func (gm *GameManager) processPlay(packet *pb.Packet) {
 		return
 	}
 
-	// REVIEW: lastPlayerId should possibly meant to be packet.From?
-	session.State.lastPlayerId = gameMsg.Play
+	session.State.lastPlayerId = packet.From
 	newState := fmt.Sprintf("  %s\n vs %s\n", session.State.updatedState, gameMsg.Play)
 	session.State.updatedState = newState
-	infoLogger.Println("upated game_state")
+	infoLogger.Println("upated gameState | lastPlayer ", packet.From)
 
-	println("broadcasting game_play")
+	infoLogger.Println("broadcasting gamePlay")
 	for _, connId := range session.Players {
 		if connId == connID(packet.From) {
 			continue
 		}
-		// REVIEW: Could make this a seperate go-routine
+		// TODO(daniel) : Could make this a seperate go-routine
+		// But what if one client doesn't get the update? That'd be problematic
 		gm.outbound <- &Command{
 			Id:      gameServerId,
 			CmdType: Deliver,
@@ -104,10 +100,10 @@ func (gm *GameManager) newGameSession(gs *GameSession) {
 		`NewGameSession created for: 
 		uuid: %s players: %+v playRate: %d`,
 		gs.SessionId, gs.Players, gs.Rate)
-	// REVIEW: Would be nice to state that this channel
-	// is an unbuffered one? That the listener of this request 
-	// is actively waiting
-	gs.created <- true
+	// channel is unbuffered, the receiver go-routine cannot proceed without this
+	go func() {
+		gs.created <- true
+	}()
 }
 
 func (gm *GameManager) interruptGame(playerId string) {
@@ -121,7 +117,7 @@ func (gm *GameManager) interruptGame(playerId string) {
 	infoLogger.Println("interrupting game with ssid: ", sessionId)
 	defer delete(gm.Sessions, sessionId)
 	for userId, ssid := range gm.currentPlayers {
-		// REVIEW: Same here, could consider a seperate goroutine 
+		// REVIEW: Same here, could consider a seperate goroutine
 		// or timeout
 		gm.outbound <- &Command{
 			Id:      gameServerId,
@@ -150,8 +146,8 @@ func (gm *GameManager) interruptGame(playerId string) {
 		warnLogger.Printf("game session found is nil")
 		return
 	}
-	// REVIEW: Is this channel/goroutine gauranteed to never be closed/stopped ?
-	// Otherwise this could potentially cause a deadlock.
+
+	// the goroutine is spawned in newGameSession() server.go
 	gameSession.cmd <- TerminateGame
 	infoLogger.Printf("successfully sent terminate cmd to game session\n")
 }
