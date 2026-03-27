@@ -173,18 +173,6 @@ func handleNewGameMessage(mgr *Manager, msg *pb.Packet) {
 	createNewGameSession(mgr, msg)
 }
 
-// REVIEW
-// Here, we basically check if these players are active
-// If active, tell the manager to create a session *1
-// If successfully or otherwise inform both clients
-// through m.deliver <- Packet *2
-// Now, i'm starting to get a bit noisy, but what if they never respond?
-// This should be blocking, in some sense, but we shouldn't keep the
-// client waiting, so it's best to add a timeout here. If gameServer
-// doesn't response withing 1-1.5s we send error message,
-// and it's worth running this on a seperate go routine or timeout
-// since we're sending messages to the manager. I'll leave that up
-// to you.
 func createNewGameSession(mgr *Manager, packet *pb.Packet) {
 	activeUsers := mgr.Snapshot()
 	// check if the recipient is active
