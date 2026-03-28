@@ -18,7 +18,6 @@ type AuthCredentials struct {
 	Username string
 }
 
-
 var GameMode = false
 var GameId string
 var GameRival string
@@ -39,6 +38,8 @@ func handleResponse(p *pb.Packet) {
 		GameMode = true
 		GameId = payload.Ssid
 		GameRival = payload.Rival
+		fmt.Printf("game_id: %v\n", GameId)
+		handleNewGameResponse(payload)
 	}
 }
 
@@ -52,25 +53,31 @@ var PaintCredentials *paintContent
 func handlePaintMessage(p *pb.Packet) *paintContent {
 	slog.Info("[debug] paint packet from server")
 	msg := p.GetPaint()
-	activeUsers := msg.ConnectedUsers
+	activeUsers := msg.Snapshot
 	fmt.Printf(" uuid: %2s\n", msg.OneTimeId)
 
 	fmt.Printf("  ACTIVE USERS\n")
-	users := make(map[string]string)
-	for i, u := range activeUsers {
-		fmt.Printf("%2d.  %2s\n", i+1, u.Username)
-		users[u.Username] = u.Id
+	// users := make(map[string]string)
+
+	lookupTable := make(map[string]string)
+
+	count := 1
+	for userId, username := range activeUsers {
+		fmt.Printf("%2d. %2s\n", count, username)
+		lookupTable[username] = userId
 	}
 
 	paint := &paintContent{
 		connId:         msg.OneTimeId,
-		connectedUsers: users,
+		connectedUsers: lookupTable,
 	}
 
 	PaintCredentials = paint
 	return paint
 }
 
+// Returns connectionId the server can use to route
+// the message to the recipient
 func findUser(username string) (string, bool) {
 	userId, ok := PaintCredentials.connectedUsers[username]
 	if !ok {
@@ -130,9 +137,14 @@ func createNewGameMessage(recipient, message string) (*pb.Packet, error) {
 		Payload: &pb.Packet_NewGame{
 			NewGame: &pb.NewGameMessage{
 				From: connID,
-				Dest: to, // "this clients-uuid",
+				Dest: to,
 			},
 		},
 	}
 	return p, nil
+}
+
+func handleNewGameResponse(msg *pb.NewGameResponse) {
+	fmt.Println("New Game Started")
+	fmt.Printf("%s\n", *msg.Info)
 }

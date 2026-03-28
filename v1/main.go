@@ -11,7 +11,7 @@ import (
 
 	"github.com/joho/godotenv"
 	db "github.com/persona-mp3/internal/database"
-	"github.com/persona-mp3/internal/server"
+	"github.com/persona-mp3/v1/server"
 )
 
 func loadEnv() *db.DBConfig {
@@ -67,7 +67,7 @@ func main() {
 	var serverPort int
 	var mode bool
 	var secure bool
-	flag.IntVar(&serverPort, "port", 4900, "Port to run server on, by defaut runs on 4900")
+	flag.IntVar(&serverPort, "port", 4000, "Port to run server on, by defaut runs on 4900")
 	flag.BoolVar(&mode, "mode", false, "Run the application in dev or prod, default is dev. Specific variables in .env file in root")
 	flag.BoolVar(&secure, "secure", false, "To run the server using TLS or no encryption algorithm")
 	flag.Parse()

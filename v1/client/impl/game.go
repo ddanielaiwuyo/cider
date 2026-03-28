@@ -1,7 +1,6 @@
 package impl
 
 import (
-	"fmt"
 	"log"
 	"log/slog"
 
@@ -23,10 +22,8 @@ func HandleGamePacket(p *pb.Packet) {
 
 	gamePacket := p.GetGame()
 
-	log.Println("rival play -> ", gamePacket.Play)
-	log.Println("ticker rate -> ", gamePacket.PlayIn)
-
-	fmt.Println("collect input")
+	log.Println("plays")
+	log.Println(gamePacket.Play)
 }
 
 func parseGameMessage(input string) *pb.Packet {

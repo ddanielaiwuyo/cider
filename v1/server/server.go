@@ -79,7 +79,7 @@ func handleConnection(mgr *manager, conn net.Conn) {
 	}
 
 	userId := newConnId()
-	mgr.register <- Client{userId, username, conn}
+	mgr.register <- Client{connID(userId), username, conn}
 
 	paintPacket, err := createPaintPacket(mgr, stub, userId)
 	if err != nil {
