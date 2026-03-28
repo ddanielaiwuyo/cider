@@ -33,7 +33,6 @@ type GameSession struct {
 	interrupt chan any
 	created   chan bool
 	cmd       chan GameCommand
-	// outcmd    chan Command
 }
 
 type GameManager struct {
@@ -97,6 +96,8 @@ func NewGameManager() *GameManager {
 const WriteTimeout = 4
 
 func (m *Manager) Listen(ctx context.Context) {
+	infoLogger.Printf("manager.Listen ===================================================\n\n")
+	defer infoLogger.Printf("manager.closed ====================================================\n\n")
 	childContext, cancel := context.WithCancel(ctx)
 	defer cancel()
 	go m.GameManager.Listen(childContext)
@@ -119,17 +120,15 @@ func (m *Manager) Listen(ctx context.Context) {
 			infoLogger.Printf("removing client: %s\n", id)
 			delete(m.connections, id)
 			m.mu.Unlock()
-			m.GameManager.privateCh <- id.String()
-			infoLogger.Printf("[debug] removed CLIENT SUCCESSFULLY\n ")
+			go func() { m.GameManager.privateCh <- id.String() }()
+			infoLogger.Printf("removed client SUCCESSFULLY\n ")
 
 		case game := <-m.game:
 			infoLogger.Printf("new game-play: %s\n", game)
-			go func() {
-				m.GameManager.Game <- game
-			}()
+			go func() { m.GameManager.Game <- game }()
 
 		case cmd := <-m.inbound:
-			infoLogger.Printf("received new cmd from node: %d, to run %v\n", cmd.Id, cmd.Packet)
+			infoLogger.Printf("received new cmd from a node: %s, to run %v\n", cmd.Id, cmd.Packet)
 
 		case q := <-m.query:
 			infoLogger.Printf("new query response: %s\n", q.Query)
@@ -146,6 +145,8 @@ func (m *Manager) Listen(ctx context.Context) {
 }
 
 func (m *Manager) handleOutbounds(cmd *Command) {
+	infoLogger.Println("handleOutbounds ===================================================")
+	defer infoLogger.Printf("closed ===================================================\n\n")
 	infoLogger.Println("handling outbound command")
 	switch cmd.CmdType {
 	case Deliver:
@@ -162,9 +163,10 @@ func (m *Manager) handleOutbounds(cmd *Command) {
 // and inactive users
 // It returns the uuid of each player mapped to their username
 func (mgr *Manager) Snapshot() map[string]string {
-	infoLogger.Printf("\n\n [debug] snapshot ===================================")
-	defer infoLogger.Printf("\n\n [debug] snapshot closed ===================================")
-	infoLogger.Println("[debug] taking snapshot")
+	infoLogger.Println("snapshot ===================================================")
+	defer infoLogger.Printf("closed ===================================================\n\n")
+
+	infoLogger.Println("taking snapshot")
 
 	mgr.mu.RLock()
 	snapshot := make(map[string]string)
@@ -172,13 +174,13 @@ func (mgr *Manager) Snapshot() map[string]string {
 		snapshot[string(connId)] = client.username
 	}
 	mgr.mu.RUnlock()
-	infoLogger.Println("[debug] taken snapshot")
+	infoLogger.Println("snapshot taken")
 	return snapshot
 }
 
 func (mgr *Manager) sendPacket(packet *pb.Packet) {
-	infoLogger.Printf("\n\n [debug] sendPacket ===================================")
-	defer infoLogger.Printf("\n\n [debug] sendPacket closed ===================================")
+	infoLogger.Printf("sendPacket ===================================================")
+	defer infoLogger.Printf("closed ===================================================\n\n")
 	mgr.mu.RLock()
 	defer mgr.mu.RUnlock()
 
@@ -198,7 +200,9 @@ func (mgr *Manager) sendPacket(packet *pb.Packet) {
 	fmt.Printf("sending packet:from: %s to: %s\n", packet.From, packet.Dest)
 	if _, err := client.conn.Write(out); err != nil {
 		errLogger.Printf("could not write to client: %s\n", err)
-		mgr.remove <- connID(destID)
-		errLogger.Println("informed manager to removed failed write to client")
+		go func() {
+			mgr.remove <- connID(destID)
+		}()
+		infoLogger.Println("informed manager to removed failed write to client")
 	}
 }
