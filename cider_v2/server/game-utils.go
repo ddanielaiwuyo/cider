@@ -1,6 +1,8 @@
 package server
 
 func (gm *GameManager) handlePublicCmd(cmd *Command) {
+	infoLogger.Println("handlePublicCmd ===================================================")
+	defer infoLogger.Println(" ===================================================")
 	switch cmd.CmdType {
 	case Handover:
 		session, found := gm.Sessions[cmd.Id]

@@ -3,11 +3,12 @@ package server
 import (
 	"context"
 	"fmt"
+	"time"
+
 	pb "github.com/persona-mp3/protocols/gen"
 )
 
 func handleGameMessage(mgr *Manager, packet *pb.Packet) {
-	infoLogger.Println("handling game packet")
 	mgr.game <- packet
 }
 
@@ -16,6 +17,8 @@ func handleUnidentifiedPacket(mgr *Manager, msg *pb.Packet) {
 }
 
 func (gm *GameManager) Listen(ctx context.Context) {
+	infoLogger.Println("gameMangaer:Listen ===================================================")
+	defer infoLogger.Println(" ===================================================")
 	infoLogger.Println("game manager listening...")
 	for {
 		select {
@@ -42,8 +45,9 @@ func (gm *GameManager) Listen(ctx context.Context) {
 }
 
 func (gm *GameManager) processPlay(packet *pb.Packet) {
+	infoLogger.Println("processPlay ===================================================")
+	defer infoLogger.Println(" ===================================================")
 	gameMsg := packet.GetGame()
-	infoLogger.Println("processing game gamePacket")
 	session, found := gm.Sessions[gameMsg.Ssid]
 	if !found {
 		infoLogger.Printf("gameMsg packet has an invalid ssid, session not found\n")
@@ -65,9 +69,7 @@ func (gm *GameManager) processPlay(packet *pb.Packet) {
 		if connId == connID(packet.From) {
 			continue
 		}
-		// my guess is this is where we were blocked?
-		// the mgr.game sends a msg to gm.Game and we're also
-		// trying to send to it here
+
 		// TODO(daniel) : Could make this a seperate go-routine
 		// But what if one client doesn't get the update? That'd be problematic
 		go func() {
@@ -90,6 +92,8 @@ func (gm *GameManager) processPlay(packet *pb.Packet) {
 }
 
 func (gm *GameManager) newGameSession(gs *GameSession) {
+	infoLogger.Println("newGameSession ===================================================")
+	defer infoLogger.Println(" ===================================================")
 	// check if these palyers are already in a game
 	for _, player := range gs.Players {
 		activeSession, found := gm.currentPlayers[player.String()]
@@ -114,13 +118,15 @@ func (gm *GameManager) newGameSession(gs *GameSession) {
 		gs.created <- true
 	}()
 
+	infoLogger.Println("new game session created successfully")
+
 	//
 }
 
 func (gm *GameManager) interruptGame(playerId string) {
 	// find the game session playerId was in
-	infoLogger.Printf("[debug] IG ===================================================")
-	defer infoLogger.Printf("[debug] IG closed ===================================================")
+	infoLogger.Println("interruptGame ===================================================")
+	defer infoLogger.Println(" ===================================================")
 	sessionId, found := gm.currentPlayers[playerId]
 	if !found {
 		infoLogger.Printf("could not find the game player %s was in\n", playerId)
@@ -130,9 +136,8 @@ func (gm *GameManager) interruptGame(playerId string) {
 	infoLogger.Println("interrupting game with ssid: ", sessionId)
 	defer delete(gm.Sessions, sessionId)
 	for userId, ssid := range gm.currentPlayers {
-		// REVIEW: Same here, could consider a seperate goroutine
-		// or timeout
-		infoLogger.Println("[debug] { sending } CULPRIT?????, game-end to mgr")
+		// TODO(daniel) same as previous
+		delete(gm.currentPlayers, userId)
 		gm.outbound <- &Command{
 			Id:      gameServerId,
 			CmdType: Deliver,
@@ -147,8 +152,6 @@ func (gm *GameManager) interruptGame(playerId string) {
 				},
 			},
 		}
-		infoLogger.Println("[debug] { sent } CULPRIT NO 😭")
-		delete(gm.currentPlayers, userId)
 	}
 
 	// find the session go-routine and terminate it
@@ -164,6 +167,12 @@ func (gm *GameManager) interruptGame(playerId string) {
 	}
 
 	// the goroutine is spawned in newGameSession() server.go
-	gameSession.cmd <- TerminateGame
+	timeout := time.NewTimer(3 * time.Second)
+	select {
+	case <-timeout.C:
+		errLogger.Println("could not send terminate command to session-routine withing timeout")
+		return
+	case gameSession.cmd <- TerminateGame:
+	}
 	infoLogger.Printf("successfully sent terminate cmd to game session\n")
 }
