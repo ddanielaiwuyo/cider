@@ -38,12 +38,12 @@ and other environmental variables for you.
 
 ## To run the server in default mode, (this is not done over any encryption)
 ```bash
-    go run main.go -port 4000 # that will start a tcp server and listen for incoming connections
+    go run cider_v2/cmd/server.go -port 4000 # that will start a tcp server and listen for incoming connections
 
 
     # You must also run the client in default mode
     # it connnects to localhost:4000 automatically,  but you must provide a username from the db
-    go run internal/client/main.go -u "persona" 
+    go run v1/client/main.go -u "persona" 
 ```
 
 
